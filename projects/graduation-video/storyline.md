@@ -70,16 +70,29 @@
 하준 드럼 · 근호 의사봉 · 주원 책·축구공·마이크 · 규연 책·AI 노트북 · 유건 운동장·야구장 · 태연 연극 가면·베이스 · 유민 도자기 물레·춤
 씨앗(프롤로그) → 새싹(각 장 구석) → 나무 7그루 → 숲(에필로그)
 
-## 다음 단계
+## 완성 (v5, 2026-10-23)
 
-1. 이미지 소스 받기 (파일명 = 학생 이름, 예: `하준.jpg`, `근호_1.jpg`) → `projects/graduation-video/images/`
-2. 나레이션 음성 준비 (TTS 또는 직접 녹음) 및 문장별 타이밍 확정
-3. 손그림·종이 콜라주 스타일 모션그래픽 제작 (HTML/Canvas → MP4)
+- 길이 2분 39초 · 1920×1080 · 30fps · 자체 작곡 배경음악 · 더빙 없음(자막으로 진행)
+- 구성: 제목 「일곱 개의 씨앗」 → 학교 사진과 일곱 친구 → 1~7장(학생별 소품 연출 + 「OO아, 너의 꿈을 응원해!」 졸업 사진 페이지)
+  → 에필로그(무대 → 큰 숲) → 엔딩 크레딧
+- 학생 사진은 Google Drive(학교 계정) `졸업영상_이미지` 폴더가 원본. 공개 저장소에는 올리지 않음
+
+## 다시 만들 때
+
+1. Drive `졸업영상_이미지` 원본을 받아 `images/` 아래에 둔다
+   - `images/cut/`, `images/faces/`, `images/props/` — 학생 프로필·얼굴·소품 스티커 (만든 방법은 아래 도구 참고)
+   - `images/raw2/` — 졸업복·공연·단체·학교 원본 사진 → `tools/make_grad.sh` 로 `images/grad/` 생성
+   - `images/ending/bg1.png`, `bg2.png` — 엔딩 크레딧 배경
+2. `node render.mjs --timeline` → `python3 tools/bgm.py` (배경음악 `audio/bgm.wav`)
+3. `node render.mjs --out 일곱개의씨앗.mp4`
 
 ## 제작 파일
 
 - `index.html` — 브라우저에서 열면 미리보기 플레이어 (로컬 서버 필요: `python3 -m http.server`)
 - `engine.js` — 손그림 선·수채 채색·스티커·테이프·종이 찢기 전환·자막
+- `tools/collage.py` — 사진 → 흰 테두리 스티커 (`--plain` 없이 쓰면 수채화 질감)
+- `tools/make_grad.sh` — 졸업 사진 페이지·학교·단체 사진 스티커 일괄 생성
+- `tools/bgm.py` — 장면 흐름에 맞춘 피아노·오르골 배경음악 합성
 - `scenes.js` — 장면별 연출과 길이(`dur`). 나레이션 음성을 받으면 `dur` 만 맞추면 된다
 - `render.mjs` — `node render.mjs` → `out/graduation.mp4` (`audio/narration.wav` 가 있으면 함께 합침)
 - 학생 사진(`images/`), 음성(`audio/`), 렌더 결과(`out/`)는 공개 저장소에 올리지 않는다
