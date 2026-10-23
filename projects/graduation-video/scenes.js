@@ -353,7 +353,7 @@ const SCENES = [
       // 야구장 스티커 + 홈런
       if (swap > 0) {
         prop(ctx, 'baseball', 1340, 580, 700, t, { start: 6.3, rot: -0.03 });
-        face(ctx, IMG.face_yugeon, 1640, 790, 72, t, { start: 6.9, seed: 460 });
+        face(ctx, IMG.face_yugeon, 1770, 470, 66, t, { start: 6.9, seed: 460 });
         const fp = prog(t, 7.8, 2.4);
         const path = q => [lerp(1200, 1720, q), 680 - Math.sin(q * Math.PI * 0.85) * 560 - q * 110];
         if (fp > 0 && fp < 1) {
@@ -524,21 +524,21 @@ const SCENES = [
       const bp = prog(t, 9.6, 0.7);
       if (bp > 0) {
         ctx.save(); ctx.translate(W / 2, 190); ctx.rotate(-0.02); ctx.scale(easeOutBack(bp), easeOutBack(bp));
-        const band = [[-620, -95], [620, -85], [590, 0], [620, 95], [-620, 88], [-590, 0]];
+        const band = [[-720, -100], [720, -90], [690, 0], [720, 100], [-720, 92], [-690, 0]];
         ctx.shadowColor = 'rgba(60,40,20,0.35)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 10;
         ctx.fillStyle = '#fffaf0'; ctx.beginPath(); band.forEach(([x, y], j) => j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fill();
         ctx.shadowColor = 'transparent';
         sketch(ctx, [...band, band[0]], { width: 4, seed: 810, t });
-        tape(ctx, -540, -90, 140, -0.5, 811); tape(ctx, 540, -90, 140, 0.5, 812);
+        tape(ctx, -640, -95, 140, -0.5, 811); tape(ctx, 640, -95, 140, 0.5, 812);
         // 학사모
-        ctx.save(); ctx.translate(-470, -10); ctx.rotate(-0.15);
+        ctx.save(); ctx.translate(-600, -10); ctx.rotate(-0.15);
         const cap = [[-60, -10], [0, -40], [60, -10], [0, 20], [-60, -10]];
         wash(ctx, cap, C.ink, { alpha: 0.95, seed: 813, t }); sketch(ctx, cap, { width: 3, seed: 814, t });
         wash(ctx, shp.rect(-34, 5, 68, 36), C.ink, { alpha: 0.95, seed: 815, t });
         sketch(ctx, [[40, -6], [52, 40]], { width: 3, seed: 816, t, color: C.yellow });
         ctx.restore();
         ctx.restore();
-        popText(ctx, '졸업을 축하합니다!', W / 2 + 40, 190, t - 9.9, { size: 120, color: C.red, stagger: 0.07 });
+        popText(ctx, '졸업을 축하합니다!', W / 2 + 60, 190, t - 9.9, { size: 100, color: C.red, stagger: 0.07 });
       }
       // 꽃가루
       if (t > 10) {
