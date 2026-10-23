@@ -15,7 +15,37 @@ function loadImages() {
   }));
   CUT_KEYS.forEach(k => load(k, `images/cut/${k}.png`));
   FACE_KEYS.forEach(k => load('face_' + k, `images/faces/${k}.png`));
+  PROP_KEYS.forEach(k => load(k, `images/props/${k}.png`));
   return Promise.all(jobs);
+}
+const PROP_KEYS = ['drum', 'gavel', 'soccer', 'book', 'laptop', 'baseball', 'masks', 'bass', 'pottery', 'dancer', 'mic',
+  'seed', 'sprout', 'tree', 'forest'];
+
+// 소품 스티커: 톡 튀어나오고, o.motion(t) 로 위치·회전·크기를 흔든다
+function prop(ctx, key, x, y, w, t, o = {}) {
+  const { start = 0, rot = 0, anchor = 'center', alpha = 1 } = o;
+  const img = IMG[key]; const p = prog(t, start, 0.5);
+  if (p <= 0 || alpha <= 0) return;
+  const m = o.motion ? o.motion(t - start) : {};
+  const h = w * img.height / img.width;
+  const s = easeOutBack(p) * (m.s ?? 1);
+  ctx.save(); ctx.globalAlpha *= alpha * clamp(p * 3);
+  ctx.translate(x + (m.dx || 0), y + (m.dy || 0)); ctx.rotate(rot + (m.r || 0) + Math.sin((t - start) * 1.4 + w) * 0.015);
+  ctx.scale(s * (m.sx ?? 1), s * (m.sy ?? 1));
+  ctx.shadowColor = 'rgba(60,40,20,0.3)'; ctx.shadowBlur = 14; ctx.shadowOffsetX = 4; ctx.shadowOffsetY = 8;
+  ctx.drawImage(img, -w / 2, anchor === 'bottom' ? -h : -h / 2, w, h);
+  ctx.restore();
+}
+// 장 구석에서 씨앗 → 새싹
+function seedToSprout(ctx, t) {
+  const x = 1830, base = 985;
+  const grow = easeOut(prog(t, 2.2, 1.0));
+  prop(ctx, 'seed', x, base - 40, 46, t, { start: 0.8, alpha: 1 - grow, rot: 0.3 });
+  if (grow > 0) {
+    ctx.save(); ctx.translate(x, base); ctx.scale(lerp(0.2, 1, grow), lerp(0.2, 1, grow)); ctx.translate(-x, -base);
+    prop(ctx, 'sprout', x, base, 140, t, { start: 2.2, anchor: 'bottom', motion: tt => ({ r: Math.sin(tt * 2) * 0.05 }) });
+    ctx.restore();
+  }
 }
 
 // 가장자리에 흐릿하게 깔리는 연필 낙서
@@ -50,6 +80,7 @@ function chapterBase(ctx, t, dur, cfg) {
   text(ctx, cfg.name, cfg.nameX || 470, cfg.nameY || 92, { size: 70, font: 'Nanum Pen Script', weight: 400, color: C.ink, reveal: prog(t, 0.9, 0.6), rot: -0.04 });
   sketch(ctx, [[(cfg.nameX || 470) - 70, (cfg.nameY || 92) + 36], [(cfg.nameX || 470) + 70, (cfg.nameY || 92) + 30]], { width: 5, color: cfg.color, seed: cfg.num, t, progress: prog(t, 1.3, 0.4) });
   chapterTitle(ctx, cfg.num, cfg.title, t, { color: cfg.color });
+  seedToSprout(ctx, t);
 }
 
 // ==================== 장면 ====================
@@ -72,9 +103,7 @@ const SCENES = [
         const p = prog(t, 1.4 + i * 0.08, 0.3);
         if (p > 0) {
           const x = -330 + i * 110, y = 120;
-          const sp = shp.ellipse(x, y, 16 * easeOutBack(p), 24 * easeOutBack(p), 20);
-          wash(ctx, sp, C.brown, { alpha: 0.9, seed: i + 4, t });
-          sketch(ctx, sp, { width: 3, seed: i + 4, t });
+          prop(ctx, 'seed', x, y, 42, t, { start: 1.4 + i * 0.08, rot: -0.3 + i * 0.1 });
         }
       }
       ctx.restore();
@@ -105,8 +134,7 @@ const SCENES = [
           const grd = ctx.createRadialGradient(x, y + 120, 0, x, y + 120, 50);
           grd.addColorStop(0, `rgba(255,220,120,${0.7 * g * pulse})`); grd.addColorStop(1, 'rgba(255,220,120,0)');
           ctx.fillStyle = grd; ctx.fillRect(x - 60, y + 60, 120, 120);
-          const sp = shp.ellipse(x, y + 120, 12 * g, 18 * g, 16);
-          wash(ctx, sp, C.brown, { alpha: 0.95, seed: 40 + i, t }); sketch(ctx, sp, { width: 2.5, seed: 40 + i, t });
+          prop(ctx, 'seed', x, y + 120, 40, t, { start: 8.2 + i * 0.12, rot: 0.2 - i * 0.07 });
           if (g >= 1) sparkle(ctx, x + 30, y + 95, 0.5, { seed: 50 + i, t });
         }
       });
@@ -119,8 +147,7 @@ const SCENES = [
     narr: "첫 번째 아이, 하준이의 씨앗은 '쿵, 쿵' 소리를 냈어요. 처음엔 책상을 두드리던 손이 어느새 드럼 스틱을 쥐었죠. 지금 하준이는 무대에 오를 날만 기다리는 드러머랍니다.",
     draw(ctx, t, dur) {
       chapterBase(ctx, t, dur, { num: 1, name: '하준', title: '쿵쿵 드러머', color: C.red, main: 'hajun2', second: 'hajun_election' });
-      const cx = 1350;
-      // 책상 → 드럼
+      // 책상 두드리기
       const deskA = 1 - prog(t, 4.2, 0.6);
       if (deskA > 0) {
         ctx.save(); ctx.globalAlpha = deskA;
@@ -129,7 +156,6 @@ const SCENES = [
         wash(ctx, shp.rect(1060, 560, 580, 40), C.brown, { alpha: 0.5 * dp, seed: 62, t });
         sketch(ctx, [[1100, 600], [1100, 800]], { width: 5, seed: 63, t, progress: dp });
         sketch(ctx, [[1600, 600], [1600, 800]], { width: 5, seed: 64, t, progress: dp });
-        // 두드리는 손 (주먹 동그라미)
         const hit = Math.abs(Math.sin(t * 6));
         sketch(ctx, shp.circle(1250, 520 - hit * 60, 32, 24), { width: 4, seed: 65, t });
         sketch(ctx, shp.circle(1450, 520 - (1 - hit) * 60, 32, 24), { width: 4, seed: 66, t });
@@ -137,48 +163,27 @@ const SCENES = [
         popText(ctx, '쿵!', 1180, 380, t - 1.6, { size: 100, color: C.red });
         popText(ctx, '쿵!', 1520, 340, t - 2.4, { size: 120, color: C.orange });
       }
-      // 드럼 세트
-      const kp = prog(t, 4.4, 1.6);
-      if (kp > 0) {
-        const bass = shp.circle(cx, 620, 150, 56);
-        wash(ctx, bass, C.red, { alpha: 0.55 * kp, seed: 70, t });
-        sketch(ctx, bass, { width: 5, seed: 71, t, progress: kp });
-        sketch(ctx, shp.circle(cx, 620, 95, 40), { width: 3, seed: 72, t, progress: kp, color: C.pencil });
-        text(ctx, 'HAJUN', cx, 620, { size: 48, font: 'Jua', weight: 400, color: '#fff', alpha: kp });
-        const snare = shp.ellipse(1105, 520, 95, 28, 30);
-        sketch(ctx, snare, { width: 4, seed: 73, t, progress: kp });
-        sketch(ctx, [[1010, 520], [1010, 590], [1200, 590], [1200, 520]], { width: 4, seed: 74, t, progress: kp });
-        wash(ctx, [[1010, 520], [1010, 590], [1200, 590], [1200, 520]], C.yellow, { alpha: 0.5 * kp, seed: 75, t });
-        sketch(ctx, [[1105, 590], [1060, 790]], { width: 3, seed: 76, t, progress: kp });
-        sketch(ctx, [[1105, 590], [1150, 790]], { width: 3, seed: 77, t, progress: kp });
-        // 심벌
-        const cym = shp.ellipse(1620, 400, 120, 22, 30);
-        const wob = Math.sin(t * 9) * 0.06 * kp;
-        ctx.save(); ctx.translate(1620, 400); ctx.rotate(wob); ctx.translate(-1620, -400);
-        wash(ctx, cym, C.yellow, { alpha: 0.8 * kp, seed: 78, t }); sketch(ctx, cym, { width: 4, seed: 79, t, progress: kp });
-        ctx.restore();
-        sketch(ctx, [[1620, 420], [1620, 790]], { width: 3, seed: 80, t, progress: kp });
-        // 스틱
-        if (kp >= 1) {
-          const a = Math.max(0, Math.sin(t * 10)) * 0.45;
-          ctx.save(); ctx.translate(980, 330); ctx.rotate(0.95 - a);
-          sketch(ctx, [[0, 0], [200, 0]], { width: 9, seed: 81, t, color: C.brown }); ctx.restore();
-          ctx.save(); ctx.translate(1520, 300); ctx.rotate(Math.PI - 1.15 + Math.max(0, -Math.sin(t * 10)) * 0.45);
-          sketch(ctx, [[0, 0], [200, 0]], { width: 9, seed: 82, t, color: C.brown }); ctx.restore();
-          for (let i = 0; i < 3; i++) note(ctx, 1200 + i * 150 + Math.sin(t * 2 + i) * 20, 300 - ((t * 60 + i * 70) % 160), 1, { seed: 90 + i, t, color: [C.red, C.blue, C.purple][i] });
+      // 드럼 세트 (박자마다 들썩)
+      const beat = tt => Math.pow(Math.max(0, Math.sin(tt * 9)), 6);
+      prop(ctx, 'drum', 1330, 610, 560, t, { start: 4.4, motion: tt => ({ s: 1 + beat(tt) * 0.035, r: Math.sin(tt * 9) * 0.01 }) });
+      if (t > 5.0) {
+        const b = beat(t - 4.4);
+        if (b > 0.3) {
+          for (let k = 0; k < 6; k++) { const a = -Math.PI / 2 + (k - 2.5) * 0.35; sketch(ctx, [[1330 + Math.cos(a) * 300, 620 + Math.sin(a) * 260], [1330 + Math.cos(a) * 345, 620 + Math.sin(a) * 300]], { width: 4, seed: 85 + k, t, color: C.orange, alpha: b }); }
         }
+        for (let i = 0; i < 3; i++) note(ctx, 1080 + i * 250 + Math.sin(t * 2 + i) * 20, 420 - ((t * 60 + i * 70) % 160), 1, { seed: 90 + i, t, color: [C.red, C.blue, C.purple][i] });
       }
       // COMING SOON 팻말
       const sp = prog(t, 8.3, 0.6);
       if (sp > 0) {
-        ctx.save(); ctx.translate(1330, 290); ctx.rotate(-0.06); ctx.scale(easeOutBack(sp), easeOutBack(sp));
+        ctx.save(); ctx.translate(1330, 268); ctx.rotate(-0.06); ctx.scale(easeOutBack(sp), easeOutBack(sp));
         ctx.shadowColor = 'rgba(60,40,20,0.3)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 6;
         ctx.fillStyle = '#fff6d8'; ctx.fillRect(-240, -60, 480, 120); ctx.shadowColor = 'transparent';
         sketch(ctx, shp.rect(-240, -60, 480, 120), { width: 3.5, seed: 95, t });
         text(ctx, 'COMING SOON!', 0, 4, { size: 72, font: 'Jua', weight: 400, color: C.red });
         tape(ctx, -200, -60, 110, -0.4, 96); tape(ctx, 200, -60, 110, 0.4, 97);
         ctx.restore();
-        sparkle(ctx, 1080, 200, 0.8, { seed: 98, t }); sparkle(ctx, 1630, 300, 0.7, { seed: 99, t });
+        sparkle(ctx, 1060, 250, 0.8, { seed: 98, t }); sparkle(ctx, 1620, 300, 0.7, { seed: 99, t });
       }
     },
   },
@@ -189,7 +194,6 @@ const SCENES = [
     narr: "두 번째 아이, 근호의 씨앗은 사람들을 모으는 힘을 가졌어요. 전교회장이 된 근호가 의사봉을 '탕' 치면, 모두의 의견이 하나로 모였답니다.",
     draw(ctx, t, dur) {
       chapterBase(ctx, t, dur, { num: 2, name: '근호', title: '우리 학교 전교회장', color: C.blue, main: 'geunho1', mainW: 560, mainY: 400, second: null });
-      // 자치회의 사진 (가운데 큰 스티커)
       sticker(ctx, IMG.geunho_council, 1330, 600, 600, t, { start: 1.0, rot: 0.04, seed: 120 });
       // 흩어진 말풍선 → 하나로
       const words = ['!', '?', '…', '좋아!', '음…', '저요!', '찬성!', '!!'];
@@ -214,21 +218,13 @@ const SCENES = [
         ctx.restore();
         sparkle(ctx, 1000, 170, 0.7, { seed: 151, t }); sparkle(ctx, 1660, 300, 0.6, { seed: 152, t });
       }
-      // 의사봉
-      const gp = prog(t, 3.2, 0.5);
-      if (gp > 0) {
-        const hit = t > 4.4 ? 0 : Math.max(0, Math.sin((t - 3.2) * 4)) * 0.8;
-        ctx.save(); ctx.translate(820, 700); ctx.scale(easeOutBack(gp), easeOutBack(gp));
-        sketch(ctx, shp.ellipse(0, 70, 90, 20, 24), { width: 4, seed: 160, t });
-        wash(ctx, shp.ellipse(0, 70, 90, 20, 24), C.brown, { alpha: 0.6, seed: 161, t });
-        ctx.translate(0, 20); ctx.rotate(-0.35 - hit);
-        sketch(ctx, [[0, 0], [170, 30]], { width: 11, seed: 162, t, color: C.brown });
-        const head = shp.rect(-30, -55, 60, 110);
-        wash(ctx, head, C.brown, { alpha: 0.95, seed: 163, t }); sketch(ctx, head, { width: 4, seed: 164, t });
-        sketch(ctx, [[-30, -30], [30, -30]], { width: 3, seed: 165, t, color: C.yellow });
-        sketch(ctx, [[-30, 30], [30, 30]], { width: 3, seed: 166, t, color: C.yellow });
-        ctx.restore();
-        if (t > 4.3) popText(ctx, '탕!', 900, 560, t - 4.3, { size: 110, color: C.red });
+      // 의사봉: 들었다가 '탕!'
+      const lift = tt => tt < 1.0 ? -0.35 * easeOut(clamp(tt / 1.0)) : tt < 1.12 ? lerp(-0.35, 0.06, (tt - 1.0) / 0.12) : 0.06 * Math.max(0, 1 - (tt - 1.12) * 4);
+      prop(ctx, 'gavel', 830, 700, 330, t, { start: 3.2, motion: tt => ({ r: lift(tt), dy: lift(tt) * 40, sy: tt > 1.0 && tt < 1.3 ? 0.94 : 1 }) });
+      if (t > 4.32) {
+        const ip = prog(t, 4.32, 0.35);
+        for (let k = 0; k < 7; k++) { const a = Math.PI + k * Math.PI / 6; sketch(ctx, [[760 + Math.cos(a) * 150 * (0.7 + ip * 0.3), 760 + Math.sin(a) * 90], [760 + Math.cos(a) * 200 * (0.7 + ip * 0.3), 760 + Math.sin(a) * 125]], { width: 4, seed: 168 + k, t, color: C.red, alpha: 1 - prog(t, 5.0, 0.5) }); }
+        popText(ctx, '탕!', 900, 520, t - 4.32, { size: 110, color: C.red });
       }
     },
   },
@@ -236,147 +232,84 @@ const SCENES = [
   // ---------- 3장 주원 ----------
   {
     key: 'juwon', dur: 12,
-    narr: '세 번째 아이, 주원이의 씨앗은 세 갈래로 싹을 틔웠어요. 공부도, 운동도, 노래도 모두 꽃을 피웠죠. 그중에서도 가장 크게 자란 건, 우리 반을 대표하는 목소리였답니다.',
+    narr: '세 번째 아이, 주원이의 씨앗은 세 갈래로 싹을 틔웠어요. 책을 펴면 척척박사, 운동장에선 축구왕. 게다가 노래까지 잘하는 우리 반 대표 보컬이랍니다.',
     draw(ctx, t, dur) {
-      chapterBase(ctx, t, dur, { num: 3, name: '주원', title: '삼박자 보컬', color: C.purple, main: 'juwon2', second: 'gyuyeon_juwon_sports', secondAt: 7.2 });
-      const ground = 800;
-      sketch(ctx, [[980, ground], [1780, ground]], { width: 5, seed: 200, t, progress: prog(t, 0.8, 0.8), color: C.brown });
-      wash(ctx, [[980, ground], [1780, ground], [1780, ground + 30], [980, ground + 30]], C.brown, { alpha: 0.35 * prog(t, 0.8, 0.8), seed: 201, t });
-      const items = [
-        { x: 1110, label: '공부', color: C.blue, kind: 'book' },
-        { x: 1380, label: '노래', color: C.purple, kind: 'note' },
-        { x: 1650, label: '운동', color: C.orange, kind: 'ball' },
-      ];
-      items.forEach((it, i) => {
-        const big = it.kind === 'note';
-        const g1 = prog(t, 1.6 + i * 0.5, 1.2);
-        const g2 = big ? prog(t, 6.4, 1.6) : 0;
-        if (g1 <= 0) return;
-        const topY = lerp(ground, 560, easeOut(g1)) - (big ? 170 * easeOut(g2) : 0);
-        const sway = Math.sin(t * 1.5 + i) * 10;
-        sketch(ctx, [[it.x, ground], [it.x + sway * 0.5, (ground + topY) / 2], [it.x + sway, topY]], { width: 6, seed: 210 + i, t, color: C.green });
-        // 잎
-        const lp = prog(t, 2.2 + i * 0.5, 0.5);
-        if (lp > 0) {
-          const ly = (ground + topY) / 2 + 30;
-          const leaf = [[it.x, ly], [it.x + 50 * lp, ly - 30 * lp], [it.x + 70 * lp, ly - 5], [it.x, ly]];
-          wash(ctx, leaf, C.green, { alpha: 0.8, seed: 220 + i, t }); sketch(ctx, leaf, { width: 3, seed: 221 + i, t });
+      chapterBase(ctx, t, dur, { num: 3, name: '주원', title: '삼박자 만능 보컬', color: C.purple, main: 'juwon2', second: 'gyuyeon_juwon_sports', secondAt: 8.2 });
+      // 책: 척척박사
+      prop(ctx, 'book', 1110, 600, 330, t, { start: 1.6, rot: -0.08, motion: tt => ({ dy: Math.sin(tt * 2) * 8 }) });
+      if (t > 2.4) {
+        for (let k = 0; k < 3; k++) { const ph = ((t - 2.4) * 0.5 + k / 3) % 1; text(ctx, ['A+', '?', '!'][k], 1040 + k * 80, 470 - ph * 120, { size: 52, font: 'Jua', weight: 400, color: [C.blue, C.teal, C.red][k], alpha: 1 - ph }); }
+        popText(ctx, '척척박사!', 1110, 800, t - 3.0, { size: 64, color: C.blue });
+      }
+      // 축구공: 굴러 들어와 통통
+      const bt = t - 4.2;
+      if (bt > 0) {
+        const x = lerp(1950, 1600, easeOut(clamp(bt / 1.2)));
+        const bounceH = 170 * Math.exp(-bt * 0.6) * Math.abs(Math.sin(bt * 5));
+        prop(ctx, 'soccer', x, 660 - bounceH, 220, t, { start: 4.2, rot: -bt * 4 });
+        ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(x, 780, 90 - bounceH * 0.2, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        popText(ctx, '축구왕!', 1600, 450, t - 5.4, { size: 70, color: C.orange });
+      }
+      // 마이크: 대표 보컬
+      prop(ctx, 'mic', 1370, 420, 150, t, { start: 7.4, rot: -0.35, motion: tt => ({ r: Math.sin(tt * 3) * 0.08 }) });
+      if (t > 7.9) {
+        for (let k = 0; k < 4; k++) {
+          const ph = ((t - 7.9) * 0.5 + k / 4) % 1;
+          note(ctx, 1430 + ph * 200, 330 - ph * 140 + Math.sin(ph * 8 + k) * 25, 0.9, { seed: 270 + k, t, color: [C.purple, C.pink, C.blue, C.red][k] });
         }
-        const hp = prog(t, 2.6 + i * 0.5, 0.6);
-        if (hp > 0 && !(big && g2 > 0.2)) {
-          const s = easeOutBack(hp), x = it.x + sway, y = topY - 40;
-          ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-          if (it.kind === 'book') {
-            const L = [[-70, -40], [0, -25], [0, 45], [-70, 30]], R = [[0, -25], [70, -40], [70, 30], [0, 45]];
-            wash(ctx, L, C.blue, { alpha: 0.7, seed: 230, t }); wash(ctx, R, C.teal, { alpha: 0.7, seed: 231, t });
-            sketch(ctx, [...L, L[0]], { width: 3.5, seed: 232, t }); sketch(ctx, [...R, R[0]], { width: 3.5, seed: 233, t });
-          } else if (it.kind === 'ball') {
-            const b = shp.circle(0, 0, 50, 36);
-            wash(ctx, b, C.orange, { alpha: 0.85, seed: 234, t }); sketch(ctx, b, { width: 4, seed: 235, t });
-            sketch(ctx, [[-50, 0], [50, 0]], { width: 3, seed: 236, t }); sketch(ctx, [[0, -50], [0, 50]], { width: 3, seed: 237, t });
-          } else note(ctx, 0, 20, 1.4, { seed: 238, t, color: C.purple });
-          ctx.restore();
-          text(ctx, it.label, it.x + sway - 62, topY + 70, { size: 58, font: 'Nanum Pen Script', weight: 400, color: it.color, alpha: hp });
-        }
-        // 마이크 꽃
-        if (big && g2 > 0.2) {
-          const fp = easeOutBack(prog(t, 7.2, 0.9));
-          const x = it.x + sway, y = topY - 50;
-          for (let k = 0; k < 8; k++) {
-            const a = k / 8 * Math.PI * 2 + t * 0.3;
-            const px = x + Math.cos(a) * 95 * fp, py = y + Math.sin(a) * 95 * fp;
-            const petal = shp.ellipse(px, py, 55 * fp, 38 * fp, 20);
-            wash(ctx, petal, k % 2 ? C.pink : C.purple, { alpha: 0.75, seed: 240 + k, t }); sketch(ctx, petal, { width: 2.5, seed: 250 + k, t });
-          }
-          const head = shp.circle(x, y, 62 * fp, 32);
-          wash(ctx, head, '#cfd3da', { alpha: 0.95, seed: 260, t }); sketch(ctx, head, { width: 4, seed: 261, t });
-          for (let k = -2; k <= 2; k++) sketch(ctx, [[x - 50 * fp, y + k * 20 * fp], [x + 50 * fp, y + k * 20 * fp]], { width: 2, seed: 262 + k, t, color: C.pencil });
-          if (t > 8.2) {
-            for (let k = 0; k < 4; k++) {
-              const ph = ((t - 8.2) * 0.5 + k / 4) % 1;
-              note(ctx, x + 120 + ph * 260, y - 40 - ph * 200 + Math.sin(ph * 8 + k) * 30, 1, { seed: 270 + k, t, color: [C.purple, C.pink, C.blue, C.red][k] });
-            }
-            popText(ctx, '대표 보컬!', 1690, 470, t - 9.0, { size: 76, color: C.purple });
-          }
-        }
-      });
+        popText(ctx, '대표 보컬!', 1350, 230, t - 8.6, { size: 72, color: C.purple });
+      }
     },
   },
 
   // ---------- 4장 규연 ----------
   {
     key: 'gyuyeon', dur: 12,
-    narr: '네 번째 아이, 규연이의 씨앗은 손끝에서 피어났어요. 건반 위에서는 감미로운 멜로디가 흐르고, 어떤 상황에서도 인공지능보다 빠르게 정답을 찾아냈죠.',
+    narr: '네 번째 아이, 규연이의 씨앗은 책 속에서 무럭무럭 자랐어요. 책장을 넘기며 키운 생각 덕분에, 어떤 상황에서도 인공지능보다 빠르게 정답을 찾아냈죠.',
     draw(ctx, t, dur) {
-      chapterBase(ctx, t, dur, { num: 4, name: '규연', title: '건반 위의 천재', color: C.teal, main: 'gyuyeon1', mainY: 400, second: 'gyuyeon2', secondW: 240, secondY: 730 });
-      // 건반
-      const kp = prog(t, 1.0, 1.4);
-      const KX = 1000, KY = 640, KW = 640, KH = 150;
-      if (kp > 0) {
-        wash(ctx, shp.rect(KX, KY, KW, KH), '#fff', { alpha: 0.95 * kp, seed: 300, t });
-        sketch(ctx, shp.rect(KX, KY, KW, KH), { width: 4.5, seed: 301, t, progress: kp });
-        for (let i = 1; i < 12; i++) sketch(ctx, [[KX + i * KW / 12, KY], [KX + i * KW / 12, KY + KH]], { width: 2.5, seed: 302 + i, t, progress: prog(t, 1.4 + i * 0.03, 0.3) });
-        [1, 2, 4, 5, 6, 8, 9, 11].forEach((i, k) => {
-          const bx = KX + i * KW / 12 - 18;
-          const bp = prog(t, 2.0 + k * 0.04, 0.2);
-          if (bp > 0) { ctx.fillStyle = C.ink; ctx.globalAlpha = bp; ctx.fillRect(bx, KY, 36, 90); ctx.globalAlpha = 1; }
-        });
-        // 눌리는 건반 하이라이트
-        if (t > 2.4) {
-          const key = Math.floor(t * 4) % 12;
-          ctx.fillStyle = 'rgba(79,163,165,0.45)'; ctx.fillRect(KX + key * KW / 12 + 3, KY + 92, KW / 12 - 6, KH - 96);
-          for (let k = 0; k < 5; k++) {
-            const ph = ((t - 2.4) * 0.4 + k / 5) % 1;
-            const x = KX + 80 + ph * 520, y = KY - 30 - Math.sin(ph * Math.PI) * 200 - k * 6;
-            note(ctx, x, y, 0.9, { seed: 320 + k, t, color: [C.teal, C.blue, C.purple, C.pink, C.green][k] });
-          }
-          // 멜로디 물결선
-          const wave = []; for (let i = 0; i <= 40; i++) { const x = KX + i * 16; wave.push([x, KY - 60 + Math.sin(i * 0.5 - t * 4) * 18]); }
-          sketch(ctx, wave, { width: 3, seed: 330, t, color: C.teal, alpha: 0.6, progress: prog(t, 2.4, 1) });
-        }
-      }
-      // 로봇 vs 규연
-      const rp = prog(t, 4.6, 0.9);
-      const RX = 1650, RY = 440;
-      if (rp > 0) {
-        const head = shp.rect(RX - 70, RY - 60, 140, 110), body = shp.rect(RX - 90, RY + 60, 180, 120);
-        wash(ctx, head, '#c9d4dc', { alpha: 0.9 * rp, seed: 340, t }); wash(ctx, body, '#c9d4dc', { alpha: 0.9 * rp, seed: 341, t });
-        sketch(ctx, head, { width: 4, seed: 342, t, progress: rp }); sketch(ctx, body, { width: 4, seed: 343, t, progress: rp });
-        sketch(ctx, [[RX, RY - 60], [RX, RY - 100]], { width: 3, seed: 344, t, progress: rp });
-        sketch(ctx, shp.circle(RX, RY - 108, 10, 12), { width: 3, seed: 345, t, progress: rp });
-        const blink = Math.sin(t * 12) > 0.6;
-        [[RX - 32, RY - 10], [RX + 32, RY - 10]].forEach(([x, y], i) => {
-          if (blink && t > 8.6) sketch(ctx, [[x - 12, y], [x + 12, y]], { width: 4, seed: 346 + i, t });
-          else { wash(ctx, shp.circle(x, y, 14, 14), C.red, { alpha: 0.9, seed: 348 + i, t }); sketch(ctx, shp.circle(x, y, 14, 14), { width: 3, seed: 350 + i, t }); }
-        });
-        if (t > 5.6 && t < 8.6) {
-          const dots = '.'.repeat(1 + Math.floor(t * 3) % 3);
-          ctx.save(); ctx.translate(RX - 10, RY - 190);
-          bubble(ctx, 0, 0, 260, 90, t, { seed: 352, tail: [0.2, 1] });
-          text(ctx, '계산 중' + dots, -110, 4, { size: 44, font: 'Jua', weight: 400, color: C.pencil, align: 'left' });
+      chapterBase(ctx, t, dur, { num: 4, name: '규연', title: 'AI보다 빠른 두뇌', color: C.teal, main: 'gyuyeon1', mainY: 400, second: 'gyuyeon2', secondW: 240, secondY: 730 });
+      // 책 + 넘어가는 책장
+      prop(ctx, 'book', 1110, 660, 340, t, { start: 1.0, rot: 0.06 });
+      if (t > 1.8 && t < 7.2) {
+        for (let k = 0; k < 3; k++) {
+          const ph = ((t - 1.8) * 0.8 + k / 3) % 1;
+          ctx.save(); ctx.translate(1110, 560); ctx.rotate(-ph * Math.PI * 0.9);
+          const pg = [[0, 0], [130, -18], [140, 50], [0, 60]];
+          wash(ctx, pg, '#fffdf3', { alpha: 0.95 * (1 - ph), seed: 300 + k, t });
+          sketch(ctx, [...pg, pg[0]], { width: 2.5, seed: 303 + k, t, alpha: 1 - ph });
           ctx.restore();
         }
-        if (t > 8.6) {
-          ctx.save(); ctx.translate(RX - 10, RY - 190);
-          bubble(ctx, 0, 0, 160, 90, t, { seed: 353, tail: [0.2, 1] });
-          text(ctx, '?!', 0, 4, { size: 56, font: 'Jua', weight: 400, color: C.red });
-          ctx.restore();
-        }
+        text(ctx, '사락사락~', 1110, 450, { size: 50, font: 'Nanum Pen Script', weight: 400, color: C.teal, rot: Math.sin(t * 3) * 0.06 });
       }
-      // 전구 번쩍
+      // AI 노트북
+      prop(ctx, 'laptop', 1610, 600, 430, t, { start: 3.8, rot: -0.04 });
+      if (t > 5.0 && t < 8.4) {
+        const dots = '.'.repeat(1 + Math.floor(t * 3) % 3);
+        ctx.save(); ctx.translate(1640, 330);
+        bubble(ctx, 0, 0, 280, 90, t, { seed: 352, tail: [0.1, 1] });
+        text(ctx, 'AI 계산 중' + dots, -118, 4, { size: 42, font: 'Jua', weight: 400, color: C.pencil, align: 'left' });
+        ctx.restore();
+      }
+      if (t > 8.4) {
+        ctx.save(); ctx.translate(1640, 330);
+        bubble(ctx, 0, 0, 170, 90, t, { seed: 353, tail: [0.1, 1] });
+        text(ctx, '?!', 0, 4, { size: 56, font: 'Jua', weight: 400, color: C.red });
+        ctx.restore();
+      }
+      // 규연 번쩍
       const lp = prog(t, 7.4, 0.5);
       if (lp > 0) {
-        const LX = 1120, LY = 400, s = easeOutBack(lp);
+        const LX = 1110, LY = 405, s = easeOutBack(lp);
         const glow = ctx.createRadialGradient(LX, LY, 0, LX, LY, 170 * s);
         glow.addColorStop(0, 'rgba(255,225,110,0.75)'); glow.addColorStop(1, 'rgba(255,225,110,0)');
         ctx.fillStyle = glow; ctx.fillRect(LX - 200, LY - 200, 400, 400);
         ctx.save(); ctx.translate(LX, LY); ctx.scale(s, s);
-        const bulb = shp.circle(0, 0, 60, 30);
+        const bulb = shp.circle(0, 0, 55, 30);
         wash(ctx, bulb, C.yellow, { alpha: 0.95, seed: 360, t }); sketch(ctx, bulb, { width: 4, seed: 361, t });
-        sketch(ctx, shp.rect(-28, 58, 56, 40), { width: 4, seed: 362, t });
-        for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; sketch(ctx, [[Math.cos(a) * 85, Math.sin(a) * 85], [Math.cos(a) * 120, Math.sin(a) * 120]], { width: 4, seed: 363 + k, t, color: C.orange }); }
+        sketch(ctx, shp.rect(-26, 53, 52, 36), { width: 4, seed: 362, t });
+        for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; sketch(ctx, [[Math.cos(a) * 80, Math.sin(a) * 80], [Math.cos(a) * 112, Math.sin(a) * 112]], { width: 4, seed: 363 + k, t, color: C.orange }); }
         ctx.restore();
-        popText(ctx, '번쩍!', LX - 10, LY - 165, t - 7.8, { size: 80, color: C.orange });
+        popText(ctx, '번쩍! 정답!', LX, LY - 160, t - 7.8, { size: 72, color: C.orange });
       }
     },
   },
@@ -388,70 +321,55 @@ const SCENES = [
     draw(ctx, t, dur) {
       chapterBase(ctx, t, dur, { num: 5, name: '유건', title: '바람의 야구왕', color: C.green, main: 'yugeon2', mainY: 400, second: 'yugeon3', secondAt: 7.0 });
       const swap = easeInOut(prog(t, 6.2, 0.8));
-      // 달리기 장면
+      // 운동장 달리기
       if (swap < 1) {
         ctx.save(); ctx.globalAlpha = 1 - swap;
-        // 트랙
         sketch(ctx, [[980, 760], [1800, 760]], { width: 4, seed: 400, t, progress: prog(t, 0.8, 0.6), color: C.brown });
         sketch(ctx, [[980, 640], [1800, 640]], { width: 3, seed: 401, t, progress: prog(t, 0.9, 0.6), color: C.brown, alpha: 0.5 });
-        // 속도선
         for (let k = 0; k < 9; k++) {
           const ph = ((t * 1.6 + k / 9) % 1);
           const y = 300 + (k * 53) % 420, x = 1800 - ph * 900;
           sketch(ctx, [[x, y], [x + 120 + (k % 3) * 40, y]], { width: 3, seed: 410 + k, t, color: C.teal, alpha: 0.7 });
         }
-        // 헉헉 친구들 (뒤처짐)
         const lag = prog(t, 1.4, 4.5);
         for (let k = 0; k < 2; k++) {
           const x = 1260 - k * 170 - lag * 240, y = 600, bob = Math.abs(Math.sin(t * 8 + k)) * 12;
           sketch(ctx, shp.circle(x, y - 110 - bob, 28, 22), { width: 3.5, seed: 420 + k, t, progress: prog(t, 1.2, 0.5) });
           sketch(ctx, [[x, y - 82 - bob], [x - 8, y - 20 - bob], [x - 40, y + 30], [x - 8, y - 20 - bob], [x + 30, y + 30]], { width: 3.5, seed: 422 + k, t, progress: prog(t, 1.2, 0.5) });
           sketch(ctx, [[x - 4, y - 65 - bob], [x - 45, y - 40 - bob]], { width: 3.5, seed: 424 + k, t, progress: prog(t, 1.2, 0.5) });
-          if (t > 2.5) text(ctx, '헉헉', x, y - 170 - bob, { size: 40, font: 'Nanum Pen Script', weight: 400, color: C.pencil, rot: -0.1 });
+          if (t > 2.5) text(ctx, '헉헉', x, y - 170 - bob, { size: 44, font: 'Nanum Pen Script', weight: 400, color: C.pencil, rot: -0.1 });
         }
-        // 유건 얼굴 배지 (앞서 달림)
         const bob = Math.abs(Math.sin(t * 9)) * 18;
         face(ctx, IMG.face_yugeon, 1560 + Math.sin(t * 2) * 15, 470 - bob, 95, t, { start: 1.0, seed: 430 });
         if (t > 1.5) {
           for (let k = 0; k < 3; k++) {
             const ph = ((t * 2 + k / 3) % 1);
-            const pts = shp.circle(1440 - ph * 150, 700 - ph * 30, 20 + ph * 30, 16);
-            sketch(ctx, pts, { width: 3, seed: 440 + k, t, alpha: 1 - ph, color: C.brown });
+            sketch(ctx, shp.circle(1440 - ph * 150, 700 - ph * 30, 20 + ph * 30, 16), { width: 3, seed: 440 + k, t, alpha: 1 - ph, color: C.brown });
           }
           popText(ctx, '쌩~!', 1560, 280, t - 2.2, { size: 90, color: C.teal });
         }
         ctx.restore();
       }
-      // 야구장
+      // 야구장 스티커 + 홈런
       if (swap > 0) {
-        ctx.save(); ctx.globalAlpha = swap;
-        const D = [[1360, 800], [1600, 600], [1360, 400], [1120, 600]];
-        wash(ctx, [[1360, 860], [1760, 560], [1360, 260], [960, 560]], C.green, { alpha: 0.45, seed: 450, t });
-        wash(ctx, D, '#d9a66b', { alpha: 0.6, seed: 451, t });
-        sketch(ctx, [...D, D[0]], { width: 4, seed: 452, t, color: '#fff' });
-        D.forEach(([x, y], i) => wash(ctx, shp.rect(x - 14, y - 14, 28, 28), '#fff', { alpha: 1, seed: 453 + i, t }));
-        // 타자 유건
-        face(ctx, IMG.face_yugeon, 1360, 700, 70, t, { start: 6.6, seed: 460 });
-        const swing = prog(t, 7.6, 0.25);
-        ctx.save(); ctx.translate(1400, 740); ctx.rotate(lerp(-2.2, 0.4, easeOut(swing)));
-        sketch(ctx, [[0, 0], [160, 0]], { width: 12, seed: 461, t, color: C.brown }); ctx.restore();
-        ctx.restore();
-        // 홈런 공 → 별
+        prop(ctx, 'baseball', 1340, 580, 700, t, { start: 6.3, rot: -0.03 });
+        face(ctx, IMG.face_yugeon, 1640, 790, 72, t, { start: 6.9, seed: 460 });
         const fp = prog(t, 7.8, 2.4);
+        const path = q => [lerp(1200, 1720, q), 680 - Math.sin(q * Math.PI * 0.85) * 560 - q * 110];
         if (fp > 0 && fp < 1) {
-          const x = lerp(1440, 1720, fp), y = 700 - Math.sin(fp * Math.PI * 0.85) * 520 - fp * 120;
-          for (let k = 1; k < 8; k++) { const q = Math.max(0, fp - k * 0.025); sketch(ctx, shp.circle(lerp(1440, 1720, q), 700 - Math.sin(q * Math.PI * 0.85) * 520 - q * 120, 4, 8), { width: 3, seed: 470 + k, t, color: C.pencil, alpha: 0.6 }); }
+          for (let k = 1; k < 8; k++) { const [qx, qy] = path(Math.max(0, fp - k * 0.025)); sketch(ctx, shp.circle(qx, qy, 4, 8), { width: 3, seed: 470 + k, t, color: C.pencil, alpha: 0.6 }); }
+          const [x, y] = path(fp);
           const b = shp.circle(x, y, 24, 20);
           wash(ctx, b, '#fff', { alpha: 1, seed: 480, t }); sketch(ctx, b, { width: 3.5, seed: 481, t });
           sketch(ctx, [[x - 12, y - 18], [x - 6, y], [x - 12, y + 18]], { width: 2.5, seed: 482, t, color: C.red });
         }
         if (fp >= 1) {
           const sp = prog(t, 10.2, 0.6);
-          ctx.save(); ctx.translate(1720, 170); ctx.rotate(t * 0.8); ctx.scale(easeOutElastic(sp), easeOutElastic(sp));
+          ctx.save(); ctx.translate(1720, 210); ctx.rotate(t * 0.8); ctx.scale(easeOutElastic(sp), easeOutElastic(sp));
           starDoodle(ctx, 0, 0, 60, { seed: 490, t }); ctx.restore();
-          sparkle(ctx, 1620, 120, 0.7, { seed: 491, t }); sparkle(ctx, 1810, 260, 0.6, { seed: 492, t });
+          sparkle(ctx, 1620, 170, 0.7, { seed: 491, t }); sparkle(ctx, 1810, 300, 0.6, { seed: 492, t });
         }
-        if (t > 8.0) popText(ctx, '홈런!', 1150, 260, t - 8.0, { size: 110, color: C.red });
+        if (t > 8.0) popText(ctx, '홈런!', 1120, 300, t - 8.0, { size: 110, color: C.red });
       }
     },
   },
@@ -459,54 +377,33 @@ const SCENES = [
   // ---------- 6장 태연 ----------
   {
     key: 'taeyeon', dur: 12,
-    narr: '여섯 번째 아이, 태연이의 씨앗은 팔방으로 가지를 뻗었어요. 공부도, 춤도, 연기도 척척. 무엇이든 해내는 우리 반 팔방미인이랍니다.',
+    narr: '여섯 번째 아이, 태연이의 씨앗은 팔방으로 가지를 뻗었어요. 무대 위에선 멋진 배우, 베이스를 잡으면 든든한 연주자. 무엇이든 해내는 우리 반 팔방미인이랍니다.',
     draw(ctx, t, dur) {
-      chapterBase(ctx, t, dur, { num: 6, name: '태연', title: '우리 반 팔방미인', color: C.pink, main: 'taeyeon1', second: 'yumin_taeyeon1', secondAt: 7.6 });
-      const TX = 1370, TY = 520, ground = 820;
-      const tp = prog(t, 0.9, 1.2);
-      sketch(ctx, [[TX - 18, ground], [TX - 10, TY + 40], [TX, TY]], { width: 14, seed: 500, t, progress: tp, color: C.brown });
-      sketch(ctx, [[TX + 18, ground], [TX + 10, TY + 40]], { width: 8, seed: 501, t, progress: tp, color: C.brown });
-      sketch(ctx, [[1100, ground], [1640, ground]], { width: 4, seed: 502, t, progress: tp, color: C.green });
-      const items = ['book', 'note', 'mask', 'star', 'heart', 'shoe', 'trophy', 'pencil'];
-      const labels = ['공부', '춤', '연기', '', '', '', '', ''];
-      items.forEach((kind, i) => {
-        const a = lerp(-Math.PI * 1.05, Math.PI * 0.05, i / 7);
-        const L = 270;
-        const bp = prog(t, 2.1 + i * 0.22, 0.7);
-        if (bp <= 0) return;
-        const ex = TX + Math.cos(a) * L, ey = TY + Math.sin(a) * L * 0.85;
-        sketch(ctx, [[TX, TY], [lerp(TX, ex, 0.5), lerp(TY, ey, 0.5) - 15], [ex, ey]], { width: 6, seed: 510 + i, t, progress: bp, color: C.brown });
-        const lp = prog(t, 2.6 + i * 0.22, 0.5);
-        if (lp > 0) {
-          const blob = shp.circle(ex, ey, 62 * easeOutBack(lp), 20);
-          wash(ctx, blob, C.green, { alpha: 0.55, seed: 520 + i, t, spread: 10 });
+      chapterBase(ctx, t, dur, { num: 6, name: '태연', title: '우리 반 팔방미인', color: C.pink, main: 'taeyeon1', second: 'yumin_taeyeon1', secondAt: 8.4 });
+      // 팔방으로 뻗는 손그림 선 (배경)
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * Math.PI * 2 + 0.2;
+        const p = prog(t, 0.9 + i * 0.1, 0.6);
+        sketch(ctx, [[1370 + Math.cos(a) * 120, 520 + Math.sin(a) * 100], [1370 + Math.cos(a) * 330, 520 + Math.sin(a) * 270]], { width: 4, seed: 500 + i, t, progress: p, color: C.pink, alpha: 0.45 });
+      }
+      // 연극 가면: 웃음 ↔ 울음 뒤집기
+      const flip = Math.cos(Math.max(0, t - 3.0) * 2.2);
+      prop(ctx, 'masks', 1150, 520, 400, t, { start: 1.8, rot: -0.06, motion: tt => ({ sx: tt > 1.2 ? Math.sign(flip || 1) * Math.max(0.15, Math.abs(flip)) : 1, dy: Math.sin(tt * 2) * 8 }) });
+      text(ctx, '멋진 배우', 1150, 760, { size: 60, font: 'Nanum Pen Script', weight: 400, color: C.purple, reveal: prog(t, 3.0, 0.6), rot: -0.04 });
+      // 베이스 기타
+      prop(ctx, 'bass', 1620, 540, 250, t, { start: 4.6, rot: 0.18, motion: tt => ({ r: Math.sin(tt * 6) * 0.03 }) });
+      if (t > 5.3) {
+        for (let k = 0; k < 4; k++) {
+          const ph = ((t - 5.3) * 0.45 + k / 4) % 1;
+          note(ctx, 1500 - ph * 180, 560 - ph * 260 + Math.sin(ph * 7 + k) * 25, 1, { seed: 540 + k, t, color: [C.pink, C.purple, C.orange, C.blue][k] });
         }
-        const ip = prog(t, 4.6 + i * 0.35, 0.5);
-        if (ip > 0) {
-          const s = easeOutBack(ip), bob = Math.sin(t * 2 + i) * 6;
-          ctx.save(); ctx.translate(ex, ey + bob); ctx.scale(s, s);
-          const sd = 530 + i * 3;
-          if (kind === 'book') { const b = shp.rect(-34, -26, 68, 52); wash(ctx, b, C.blue, { alpha: 0.85, seed: sd, t }); sketch(ctx, b, { width: 3, seed: sd + 1, t }); sketch(ctx, [[0, -26], [0, 26]], { width: 3, seed: sd + 2, t }); }
-          else if (kind === 'note') note(ctx, -6, 18, 1.1, { seed: sd, t, color: C.purple });
-          else if (kind === 'mask') {
-            const m1 = shp.circle(-18, 0, 26, 18), m2 = shp.circle(20, 4, 26, 18);
-            wash(ctx, m1, '#fff', { alpha: 1, seed: sd, t }); sketch(ctx, m1, { width: 3, seed: sd + 1, t });
-            wash(ctx, m2, C.yellow, { alpha: 1, seed: sd + 2, t }); sketch(ctx, m2, { width: 3, seed: sd + 3, t });
-            sketch(ctx, shp.circle(-18, 6, 10, 10, 0.2, Math.PI * 0.8), { width: 2.5, seed: sd + 4, t });
-            sketch(ctx, shp.circle(20, 18, 10, 10, Math.PI * 1.2, Math.PI * 0.6), { width: 2.5, seed: sd + 5, t });
-          }
-          else if (kind === 'star') starDoodle(ctx, 0, 0, 34, { seed: sd, t });
-          else if (kind === 'heart') { const h = shp.heart(0, 0, 40); wash(ctx, h, C.red, { alpha: 0.85, seed: sd, t }); sketch(ctx, h, { width: 3, seed: sd + 1, t }); }
-          else if (kind === 'shoe') { const sh = [[-36, 10], [-36, -20], [-10, -20], [6, 0], [36, 4], [36, 18], [-36, 18], [-36, 10]]; wash(ctx, sh, C.pink, { alpha: 0.9, seed: sd, t }); sketch(ctx, sh, { width: 3, seed: sd + 1, t }); }
-          else if (kind === 'trophy') { const cup = [[-28, -30], [28, -30], [18, 8], [-18, 8], [-28, -30]]; wash(ctx, cup, C.yellow, { alpha: 0.95, seed: sd, t }); sketch(ctx, cup, { width: 3, seed: sd + 1, t }); sketch(ctx, [[0, 8], [0, 26], [-16, 30], [16, 30]], { width: 3, seed: sd + 2, t }); }
-          else if (kind === 'pencil') { const pc = [[-36, 8], [24, -12], [36, -16], [28, -4], [-32, 16], [-36, 8]]; wash(ctx, pc, C.orange, { alpha: 0.9, seed: sd, t }); sketch(ctx, pc, { width: 3, seed: sd + 1, t }); }
-          ctx.restore();
-          if (labels[i]) text(ctx, labels[i], ex - 70, ey + 40, { size: 54, font: 'Nanum Pen Script', weight: 400, color: C.ink, alpha: ip });
-        }
-      });
+        sketch(ctx, [[1700, 560], [1760, 540]], { width: 3, seed: 548, t, color: C.orange, alpha: Math.abs(Math.sin(t * 12)) });
+        sketch(ctx, [[1700, 600], [1770, 610]], { width: 3, seed: 549, t, color: C.orange, alpha: Math.abs(Math.cos(t * 12)) });
+      }
+      text(ctx, '든든한 연주자', 1600, 885, { size: 56, font: 'Nanum Pen Script', weight: 400, color: C.orange, reveal: prog(t, 5.6, 0.6), rot: 0.03 });
       if (t > 8.6) {
-        popText(ctx, '팔방미인!', 1730, 745, t - 8.6, { size: 80, color: C.pink });
-        sparkle(ctx, 1080, 300, 0.7, { seed: 560, t }); sparkle(ctx, 1780, 420, 0.6, { seed: 561, t });
+        popText(ctx, '팔방미인!', 1380, 250, t - 8.6, { size: 84, color: C.pink });
+        sparkle(ctx, 1110, 300, 0.7, { seed: 560, t }); sparkle(ctx, 1780, 360, 0.6, { seed: 561, t });
       }
     },
   },
@@ -516,60 +413,42 @@ const SCENES = [
     key: 'yumin', dur: 12,
     narr: '일곱 번째 아이, 유민이의 씨앗은 흙과 음악을 좋아했어요. 물레 위에서 도자기를 빚고, 음악에 맞춰 춤을 추던 유민이는 지금 반짝이는 스타로 자라는 중이에요.',
     draw(ctx, t, dur) {
-      chapterBase(ctx, t, dur, { num: 7, name: '유민', title: '반짝반짝 스타', color: C.orange, main: 'yumin1', mainY: 400, second: 'yumin_taeyeon_camp1', secondAt: 8.0 });
-      // 스포트라이트
-      const sl = prog(t, 5.4, 0.6);
+      chapterBase(ctx, t, dur, { num: 7, name: '유민', title: '반짝반짝 스타', color: C.orange, main: 'yumin1', mainY: 400, second: 'yumin_taeyeon_camp1', secondAt: 8.4 });
+      // 도자기 물레 (빙글빙글)
+      prop(ctx, 'pottery', 1160, 640, 430, t, { start: 1.0, motion: tt => ({ dx: Math.sin(tt * 30) * 1.5, r: Math.sin(tt * 2) * 0.02 }) });
+      if (t > 1.6) {
+        for (let k = 0; k < 3; k++) {
+          const a0 = t * 3 + k * 2.1;
+          const arc = []; for (let q = 0; q <= 12; q++) { const a = a0 + q * 0.12; arc.push([1160 + Math.cos(a) * 250, 560 + Math.sin(a) * 60]); }
+          sketch(ctx, arc, { width: 3, seed: 630 + k, t, color: C.brown, alpha: 0.55 });
+        }
+        if (t < 5.6) text(ctx, '빙글빙글~', 1160, 380, { size: 58, font: 'Nanum Pen Script', weight: 400, color: C.brown, rot: Math.sin(t * 3) * 0.08 });
+      }
+      // 스포트라이트 + 춤
+      const sl = prog(t, 4.4, 0.6);
       if (sl > 0) {
-        ctx.save(); ctx.globalAlpha = 0.55 * sl;
-        const g = ctx.createLinearGradient(1700, 80, 1350, 800);
-        g.addColorStop(0, 'rgba(255,236,170,0.95)'); g.addColorStop(1, 'rgba(255,236,170,0.15)');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(1660, 70); ctx.lineTo(1760, 70); ctx.lineTo(1660, 820); ctx.lineTo(1080, 820); ctx.closePath(); ctx.fill();
+        ctx.save(); ctx.globalAlpha = 0.5 * sl;
+        const g = ctx.createLinearGradient(1700, 80, 1600, 820);
+        g.addColorStop(0, 'rgba(255,236,170,0.95)'); g.addColorStop(1, 'rgba(255,236,170,0.2)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(1650, 70); ctx.lineTo(1760, 70); ctx.lineTo(1830, 820); ctx.lineTo(1390, 820); ctx.closePath(); ctx.fill();
         ctx.restore();
-        sketch(ctx, shp.rect(1650, 40, 120, 50), { width: 4, seed: 600, t });
-        wash(ctx, shp.rect(1650, 40, 120, 50), C.ink, { alpha: 0.8, seed: 601, t });
+        wash(ctx, shp.rect(1650, 40, 120, 50), C.ink, { alpha: 0.8, seed: 601, t }); sketch(ctx, shp.rect(1650, 40, 120, 50), { width: 4, seed: 600, t });
       }
-      // 물레와 도자기
-      const WX = 1250, WY = 760;
-      const wp = prog(t, 0.9, 0.9);
-      const plate = shp.ellipse(WX, WY, 190, 38, 36);
-      wash(ctx, plate, '#9aa3ab', { alpha: 0.8 * wp, seed: 610, t }); sketch(ctx, plate, { width: 4, seed: 611, t, progress: wp });
-      sketch(ctx, [[WX - 120, WY + 30], [WX - 140, WY + 90], [WX + 140, WY + 90], [WX + 120, WY + 30]], { width: 4, seed: 612, t, progress: wp });
-      const vp = easeOut(prog(t, 1.6, 2.6));
-      if (vp > 0) {
-        const h = 260 * vp;
-        const body = y => 55 + 60 * Math.sin(Math.PI * y / 190 * 0.95);
-        const prof = y => y <= 190 ? body(y) : y < 240 ? lerp(body(190), 36, (y - 190) / 50) : lerp(36, 60, (y - 240) / 20);
-        const left = [], right = [];
-        for (let k = 0; k <= 20; k++) { const yy = k / 20 * h; const w = prof(yy / vp); left.push([WX - w, WY - 10 - yy]); right.push([WX + w, WY - 10 - yy]); }
-        const vase = [...left, ...right.reverse()];
-        wash(ctx, vase, C.brown, { alpha: 0.85, seed: 620, t }); sketch(ctx, vase, { width: 4, seed: 621, t });
-        // 회전 무늬
-        for (let k = 0; k < 4; k++) {
-          const ph = ((t * 0.8 + k / 4) % 1) * 2 - 1;
-          const yy = h * (0.25 + 0.15 * k);
-          const w = prof(yy / Math.max(vp, 0.01));
-          sketch(ctx, [[WX + ph * w * 0.9, WY - 10 - yy - 20], [WX + ph * w * 0.9, WY - 10 - yy + 20]], { width: 3, seed: 630 + k, t, color: '#f3d9b5', alpha: 1 - Math.abs(ph) });
-        }
-        if (t > 1.6 && t < 4.4) text(ctx, '빙글빙글~', WX, WY - 330, { size: 52, font: 'Nanum Pen Script', weight: 400, color: C.brown, rot: Math.sin(t * 3) * 0.08 });
+      prop(ctx, 'dancer', 1610, 520, 330, t, { start: 4.8, motion: tt => ({ r: Math.sin(tt * 4) * 0.14, dy: -Math.abs(Math.sin(tt * 4)) * 30, sx: Math.sin(tt * 1.3) > -0.9 ? 1 : -1 }) });
+      if (t > 5.2) for (let k = 0; k < 4; k++) {
+        const ph = ((t - 5.2) * 0.45 + k / 4) % 1;
+        note(ctx, 1420 + ph * 360, 700 - Math.sin(ph * Math.PI * 2 + k) * 60 - ph * 300, 0.9, { seed: 640 + k, t, color: [C.orange, C.pink, C.purple, C.blue][k] });
       }
-      // 춤추는 음표와 스타 유민
-      if (t > 4.2) {
-        for (let k = 0; k < 4; k++) {
-          const ph = ((t - 4.2) * 0.45 + k / 4) % 1;
-          note(ctx, 1000 + ph * 360, 600 - Math.sin(ph * Math.PI * 2 + k) * 80 - ph * 180, 0.9, { seed: 640 + k, t, color: [C.orange, C.pink, C.purple, C.blue][k] });
-        }
-      }
-      face(ctx, IMG.face_yumin, 1560, 470, 100, t, { start: 6.0, seed: 650, ring: '#ffe9a8' });
-      if (t > 6.6) {
+      if (t > 7.0) {
         for (let k = 0; k < 10; k++) {
           const r = rng(660 + k);
           const x = 1020 + r() * 800, sp = 0.15 + r() * 0.15;
-          const y = ((t - 6.6) * sp * 600 + r() * 600) % 760 + 60;
+          const y = ((t - 7.0) * sp * 600 + r() * 600) % 760 + 60;
           ctx.save(); ctx.translate(x + Math.sin(t * 2 + k) * 20, y); ctx.rotate(t * (r() - 0.5) * 3);
           starDoodle(ctx, 0, 0, 16 + r() * 16, { seed: 670 + k, t, fill: [C.yellow, C.pink, C.orange][k % 3] });
           ctx.restore();
         }
-        popText(ctx, '반짝반짝 스타!', 1540, 260, t - 7.4, { size: 76, color: C.orange });
+        popText(ctx, '반짝반짝 스타!', 1250, 290, t - 7.6, { size: 76, color: C.orange });
       }
     },
   },
@@ -592,6 +471,22 @@ const SCENES = [
         sketch(ctx, pts.slice(1, -1), { width: 4, seed: 702 + i, t });
       });
       wash(ctx, shp.rect(0, 0, W, 60), C.red, { alpha: 0.9, seed: 704, t });
+      // 일곱 그루 나무 → 숲
+      const toForest = easeInOut(prog(t, 6.6, 1.2));
+      for (let i = 0; i < 7; i++) {
+        const gp = easeOut(prog(t, 2.6 + i * 0.25, 1.0)); if (gp <= 0) continue;
+        const x = 330 + i * 210, base = 960;
+        ctx.save(); ctx.translate(x, base); ctx.scale(gp, gp); ctx.translate(-x, -base);
+        prop(ctx, 'tree', x, base, 210, t, { start: 2.6 + i * 0.25, anchor: 'bottom', alpha: 1 - toForest, motion: tt => ({ r: Math.sin(tt * 1.5 + i) * 0.03 }) });
+        ctx.restore();
+      }
+      if (toForest > 0) {
+        [250, 720, 1200, 1670].forEach((x, i) => {
+          ctx.save(); ctx.globalAlpha = toForest;
+          prop(ctx, 'forest', x, 1150 + (i % 2) * 25, 520, t, { start: 6.6 + i * 0.12, anchor: 'bottom' });
+          ctx.restore();
+        });
+      }
       // 무대 바닥
       sketch(ctx, [[140, 640], [1780, 640]], { width: 5, seed: 705, t, color: C.brown });
       wash(ctx, [[140, 640], [1780, 640], [1860, 700], [60, 700]], C.brown, { alpha: 0.45, seed: 706, t });
@@ -600,16 +495,8 @@ const SCENES = [
       order.forEach((k, i) => {
         const x = 330 + i * 210, y = 470 + (i % 2) * 30;
         face(ctx, IMG['face_' + k], x, y - Math.abs(Math.sin(t * 4 + i)) * (t > 3.5 ? 14 : 0), 80, t, { start: 1.2 + i * 0.3, seed: 710 + i });
-        const ip = prog(t, 2.4 + i * 0.3, 0.5); if (ip <= 0) return;
-        ctx.save(); ctx.translate(x, y + 125); ctx.scale(easeOutBack(ip), easeOutBack(ip));
-        const sd = 720 + i * 5;
-        if (k === 'hajun') { const d = shp.circle(0, 0, 36, 24); wash(ctx, d, C.red, { alpha: 0.8, seed: sd, t }); sketch(ctx, d, { width: 3, seed: sd + 1, t }); sketch(ctx, [[-30, -50 + Math.sin(t * 10) * 10], [10, -20]], { width: 5, seed: sd + 2, t, color: C.brown }); }
-        else if (k === 'juwon') { sketch(ctx, shp.circle(0, -12, 18, 16), { width: 3, seed: sd, t }); wash(ctx, shp.circle(0, -12, 18, 16), '#cfd3da', { alpha: 1, seed: sd + 1, t }); sketch(ctx, [[0, 6], [0, 40]], { width: 5, seed: sd + 2, t }); }
-        else if (k === 'gyuyeon') { const kb = shp.rect(-50, -16, 100, 34); wash(ctx, kb, '#fff', { alpha: 1, seed: sd, t }); sketch(ctx, kb, { width: 3, seed: sd + 1, t }); for (let q = 1; q < 5; q++) sketch(ctx, [[-50 + q * 20, -16], [-50 + q * 20, 18]], { width: 2, seed: sd + 2 + q, t }); }
-        else if (k === 'geunho') { const rb = [[-46, -10], [46, -10], [46, 14], [-46, 14]]; wash(ctx, rb, C.blue, { alpha: 0.85, seed: sd, t }); sketch(ctx, [...rb, rb[0]], { width: 3, seed: sd + 1, t }); text(ctx, '회장', 0, 3, { size: 26, font: 'Jua', weight: 400, color: '#fff' }); }
-        else if (k === 'yugeon') { const b = shp.circle(0, 0, 26, 20); if (t < 5) { wash(ctx, b, '#fff', { alpha: 1, seed: sd, t }); sketch(ctx, b, { width: 3, seed: sd + 1, t }); } }
-        else note(ctx, 0, 14, 0.9, { seed: sd, t, color: k === 'taeyeon' ? C.pink : C.orange });
-        ctx.restore();
+        const mini = { geunho: ['gavel', 120], hajun: ['drum', 140], juwon: ['mic', 50], gyuyeon: ['laptop', 130], yugeon: ['baseball', 150], taeyeon: ['bass', 60], yumin: ['dancer', 90] }[k];
+        prop(ctx, mini[0], x, y + 150, mini[1], t, { start: 2.4 + i * 0.3, anchor: 'bottom', rot: (i % 2 ? 0.08 : -0.08), motion: tt => ({ r: Math.sin(tt * 4 + i) * 0.06 }) });
       });
       // 음표들
       if (t > 3.5) for (let k = 0; k < 6; k++) {
@@ -618,13 +505,13 @@ const SCENES = [
       }
       // 유건의 홈런 불꽃놀이
       const bx0 = 330 + 4 * 210, by0 = 595;
-      const fly = prog(t, 5.0, 0.9);
+      const fly = prog(t, 8.2, 0.9);
       if (fly > 0 && fly < 1) {
         const x = lerp(bx0, 960, easeOut(fly)), y = lerp(by0, 190, easeOut(fly));
         const b = shp.circle(x, y, 22, 18);
         wash(ctx, b, '#fff', { alpha: 1, seed: 750, t }); sketch(ctx, b, { width: 3, seed: 751, t });
       }
-      const boom = prog(t, 5.9, 1.4);
+      const boom = prog(t, 9.1, 1.4);
       if (boom > 0 && boom < 1) {
         for (let k = 0; k < 16; k++) {
           const a = k / 16 * Math.PI * 2, R = 60 + 260 * easeOut(boom);
@@ -632,17 +519,6 @@ const SCENES = [
           sparkle(ctx, 960 + Math.cos(a) * R, 190 + Math.sin(a) * R * 0.7, 0.6, { seed: 760 + k, t, color: [C.yellow, C.red, C.pink, C.teal][k % 4] });
           ctx.restore();
         }
-      }
-      // 일곱 그루 나무 → 숲
-      for (let i = 0; i < 7; i++) {
-        const gp = easeOut(prog(t, 6.8 + i * 0.25, 1.2)); if (gp <= 0) continue;
-        const x = 330 + i * 210, base = 900, h = 120 * gp;
-        sketch(ctx, [[x, base], [x, base - h]], { width: 10, seed: 780 + i, t, color: C.brown });
-        [[0, -40, 62], [-48, -5, 46], [48, -5, 46], [0, 10, 50]].forEach(([dx, dy, rr], q) => {
-          const crown = shp.circle(x + dx * gp, base - h + dy * gp, rr * gp, 22);
-          wash(ctx, crown, [C.green, '#5fa35a', '#8cc46f'][(i + q) % 3], { alpha: 0.85, seed: 790 + i * 4 + q, t, spread: 8 });
-          sketch(ctx, crown, { width: 2.5, seed: 830 + i * 4 + q, t, color: '#3f6b3a', alpha: 0.7 });
-        });
       }
       // 축하 배너
       const bp = prog(t, 9.6, 0.7);
