@@ -1,6 +1,6 @@
 """실사 사진 → 수채화·콜라주 스티커 (기존 학생 사진과 같은 질감)
 
-사용법: python3 collage.py 입력.jpg 출력.png [--crop 4:5] [--focus x,y] [--edge cloud|rect]
+사용법: python3 collage.py 입력.jpg 출력.png [--crop 4:5] [--focus x,y] [--edge cloud|rect] [--plain]
 """
 import argparse
 import cv2
@@ -91,13 +91,13 @@ def sticker_mask(w, h, border, kind, seed=1):
     return photo.filter(ImageFilter.GaussianBlur(0.8)), outer.filter(ImageFilter.GaussianBlur(1.0)), pad
 
 
-def make_sticker(src, dst, crop=None, focus=(0.5, 0.42), edge='cloud', size=1000, seed=1):
+def make_sticker(src, dst, crop=None, focus=(0.5, 0.42), edge='cloud', size=1000, seed=1, plain=False):
     im = load(src)
     if crop:
         a, b = map(int, crop.split(':'))
         im = crop_ratio(im, (a, b), focus)
     im.thumbnail((size, size), Image.LANCZOS)
-    art = watercolor(im)
+    art = im if plain else watercolor(im)
     w, h = art.size
     border = max(10, int(max(w, h) * 0.022))
     photo, outer, pad = sticker_mask(w, h, border, edge, seed)
@@ -119,5 +119,6 @@ if __name__ == '__main__':
     ap.add_argument('--crop'); ap.add_argument('--focus', default='0.5,0.42')
     ap.add_argument('--edge', default='cloud'); ap.add_argument('--size', type=int, default=1000)
     ap.add_argument('--seed', type=int, default=1)
+    ap.add_argument('--plain', action='store_true', help='수채화 질감 없이 사진 그대로 (테두리만)')
     a = ap.parse_args()
-    print(make_sticker(a.src, a.dst, a.crop, tuple(map(float, a.focus.split(','))), a.edge, a.size, a.seed))
+    print(make_sticker(a.src, a.dst, a.crop, tuple(map(float, a.focus.split(','))), a.edge, a.size, a.seed, a.plain))

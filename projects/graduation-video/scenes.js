@@ -423,7 +423,7 @@ const SCENES = [
     key: 'yumin', dur: 12,
     narr: '일곱 번째 아이, 유민이의 씨앗은 흙과 음악을 좋아했어요. 물레 위에서 도자기를 빚고, 음악에 맞춰 춤을 추던 유민이는 지금 반짝이는 스타로 자라는 중이에요.',
     draw(ctx, t, dur) {
-      chapterBase(ctx, t, dur, { num: 7, name: '유민', title: '반짝반짝 스타', color: C.orange, main: 'yumin1', mainY: 400, second: 'yumin_taeyeon_camp1', secondAt: 8.4 });
+      chapterBase(ctx, t, dur, { num: 7, name: '유민', title: '반짝반짝 스타', color: C.orange, main: 'yumin1', mainY: 400, second: 'yumin_taeyeon_camp2', secondAt: 8.4 });
       // 도자기 물레 (빙글빙글)
       prop(ctx, 'pottery', 1160, 640, 430, t, { start: 1.0, motion: tt => ({ dx: Math.sin(tt * 30) * 1.5, r: Math.sin(tt * 2) * 0.02 }) });
       if (t > 1.6) {
@@ -627,18 +627,30 @@ function gradPage(ctx, t, key) {
   const glow = ctx.createRadialGradient(700, 560, 50, 700, 560, 650);
   glow.addColorStop(0, 'rgba(255,230,160,0.35)'); glow.addColorStop(1, 'rgba(255,230,160,0)');
   ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+  // 상자(boxW×boxH) 안에 꽉 차게 맞춘 폭
+  const fit = (im, bw, bh) => Math.min(bw, bh * im.width / im.height);
   const main = IMG[g.main];
-  const mh = 640, mw = Math.min(620, mh * main.width / main.height);
-  sticker(ctx, main, 640, 575, mw, t, { start: 0.25, rot: -0.04, seed: 960 + key.length });
-  const slots = [[1370, 470, 0.05], [1470, 800, -0.06]];
+  sticker(ctx, main, 540, 640, fit(main, 660, 790), t, { start: 0.25, rot: -0.035, seed: 960 + key.length });
   g.extras.forEach((k, i) => {
     const im = IMG[k]; const land = im.width > im.height;
-    const w = i === 0 ? (land ? 600 : 400) : (land ? 470 : 300);
-    const [x, y, r] = g.extras.length === 1 ? [1380, 590, 0.05] : slots[i];
-    sticker(ctx, im, x, y, w, t, { start: 0.7 + i * 0.45, rot: r, seed: 970 + i, tapes: 1 });
+    let x, y, bw, bh, r;
+    if (g.extras.length === 1) [x, y, bw, bh, r] = [1340, 625, 760, 800, 0.04];
+    else if (i === 0) [x, y, bw, bh, r] = [1250, 520, 820, 600, 0.04];
+    else if (land) [x, y, bw, bh, r] = [1560, 830, 600, 440, -0.05];
+    else [x, y, bw, bh, r] = [1640, 790, 430, 560, -0.05];
+    sticker(ctx, im, x, y, fit(im, bw, bh), t, { start: 0.7 + i * 0.45, rot: r, seed: 970 + i, tapes: 1 });
   });
-  banner(ctx, `${g.call}, 너의 꿈을 응원해!`, 118, t, 0.9, g.color, 84);
-  text(ctx, g.line, 640, 960, { size: 64, font: 'Nanum Pen Script', weight: 400, color: g.color, reveal: prog(t, 1.6, 0.7), rot: -0.03 });
+  banner(ctx, `${g.call}, 너의 꿈을 응원해!`, 118, t, 0.5, g.color, 84);
+  const lp = prog(t, 1.5, 0.5);
+  if (lp > 0) {
+    ctx.save(); ctx.translate(540, 1000); ctx.rotate(-0.03); ctx.scale(easeOutBack(lp), easeOutBack(lp));
+    ctx.font = '400 83px "Nanum Pen Script"'; const lw = ctx.measureText(g.line).width + 70;
+    ctx.shadowColor = 'rgba(60,40,20,0.3)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 5;
+    ctx.fillStyle = '#fffaf0'; ctx.fillRect(-lw / 2, -42, lw, 84); ctx.shadowColor = 'transparent';
+    tape(ctx, -lw / 2 + 20, -40, 90, -0.5, 985);
+    text(ctx, g.line, 0, 2, { size: 64, font: 'Nanum Pen Script', weight: 400, color: g.color });
+    ctx.restore();
+  }
   sparkle(ctx, 300, 300, 0.8, { seed: 980, t }); sparkle(ctx, 1000, 260, 0.6, { seed: 981, t }); sparkle(ctx, 1780, 600, 0.7, { seed: 982, t });
   confetti(ctx, t, 990);
 }
@@ -694,7 +706,7 @@ SCENES.push({
     // 2부: 단체 사진 + 크레딧
     if (swap > 0) {
       ctx.save(); ctx.globalAlpha = swap;
-      sticker(ctx, IMG.group3, W / 2, 400, 900, t, { start: 7.4, rot: -0.02, seed: 1003 });
+      sticker(ctx, IMG.group3, W / 2, 480, 500, t, { start: 7.4, rot: -0.02, seed: 1003 });
       const lines = [
         ['2026 졸업을 축하합니다', 76, C.red],
         ['하준 · 근호 · 주원 · 규연 · 유건 · 태연 · 유민', 60, C.ink],
@@ -702,14 +714,14 @@ SCENES.push({
       ];
       const cp = prog(t, 8.3, 0.6);
       if (cp > 0) {
-        ctx.save(); ctx.translate(W / 2, 885); ctx.rotate(-0.01); ctx.scale(easeOutBack(cp), easeOutBack(cp));
+        ctx.save(); ctx.translate(W / 2, 170); ctx.rotate(-0.01); ctx.scale(easeOutBack(cp), easeOutBack(cp));
         ctx.shadowColor = 'rgba(40,25,10,0.4)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10;
         ctx.fillStyle = 'rgba(255,250,238,0.94)'; ctx.fillRect(-640, -150, 1280, 300); ctx.shadowColor = 'transparent';
         sketch(ctx, shp.rect(-640, -150, 1280, 300), { width: 3.5, seed: 1010, t });
         tape(ctx, -560, -150, 150, -0.4, 1011); tape(ctx, 560, -150, 150, 0.4, 1012);
         ctx.restore();
       }
-      lines.forEach(([s, size, color], i) => text(ctx, s, W / 2, 795 + i * 88, { size, font: 'Single Day', weight: 400, color, reveal: prog(t, 8.7 + i * 0.9, 0.9) }));
+      lines.forEach(([s, size, color], i) => text(ctx, s, W / 2, 80 + i * 88, { size, font: 'Single Day', weight: 400, color, reveal: prog(t, 8.7 + i * 0.9, 0.9) }));
       ctx.restore();
     }
     // 마지막 페이드아웃
