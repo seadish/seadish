@@ -98,7 +98,6 @@ const SCENES = [
       const up = easeInOut(prog(t, 2.6, 0.9));
       const ty = lerp(470, 120, up), sc = lerp(1, 0.62, up);
       ctx.save(); ctx.translate(W / 2, ty); ctx.scale(sc, sc);
-      text(ctx, '옛날옛날에…', 0, -150, { size: 64, font: 'Nanum Pen Script', weight: 400, color: C.pencil, reveal: prog(t, 0.2, 0.8), alpha: 1 - up });
       popText(ctx, '일곱 개의 씨앗', 0, 0, t - 0.7, { size: 150, color: C.ink, outline: { width: 14, color: '#fff' } });
       // 씨앗 낙서
       for (let i = 0; i < 7; i++) {
@@ -578,14 +577,14 @@ const GRAD = {
   hajun: { call: '하준아', line: '미래의 멋진 드러머', color: C.red, main: 'hajun_g1', extras: ['hajun_drum', 'hajun_g2'] },
   geunho: { call: '근호야', line: '친구들의 목소리를 듣는 리더', color: C.blue, main: 'geunho_g1', extras: ['geunho_g3', 'geunho_g2'] },
   juwon: { call: '주원아', line: '척척박사 축구왕, 우리 반 보컬', color: C.purple, main: 'juwon_g1', extras: ['juwon_vocal', 'juwon_g2'] },
-  gyuyeon: { call: '규연아', line: 'AI보다 반짝이는 생각', color: C.teal, main: 'gyuyeon_g1', extras: ['gyuyeon_g2', 'gyuyeon_juwon'] },
+  gyuyeon: { call: '규연아', line: 'AI보다 반짝이는 생각', color: C.teal, main: 'gyuyeon_g1', extras: ['gyuyeon_keys', 'gyuyeon_g2', 'gyuyeon_juwon'] },
   yugeon: { call: '유건아', line: '바람처럼 달려 야구왕으로', color: C.green, main: 'yugeon_g1', extras: ['yugeon_g3', 'yugeon_g2'] },
   taeyeon: { call: '태연아', line: '무대를 빛낼 팔방미인', color: C.pink, main: 'taeyeon_g1', extras: ['taeyeon_bass', 'taeyeon_g2'] },
-  yumin: { call: '유민아', line: '반짝반짝 빛날 우리 스타', color: C.orange, main: 'yumin_g1', extras: ['yumin_g2'] },
+  yumin: { call: '유민아', line: '반짝반짝 빛날 우리 스타', color: C.orange, main: 'yumin_g1', extras: ['yumin_pottery', 'yumin_g2'] },
 };
 const GRAD_KEYS = ['hajun_g1', 'hajun_g2', 'hajun_drum', 'geunho_g1', 'geunho_g2', 'geunho_g3', 'juwon_g1', 'juwon_g2', 'juwon_vocal',
   'gyuyeon_g1', 'gyuyeon_g2', 'gyuyeon_juwon', 'yugeon_g1', 'yugeon_g2', 'yugeon_g3', 'taeyeon_g1', 'taeyeon_g2', 'taeyeon_bass',
-  'yumin_g1', 'yumin_g2', 'group1', 'group2', 'group3', 'school'];
+  'yumin_g1', 'yumin_g2', 'gyuyeon_keys', 'yumin_pottery', 'group1', 'group2', 'group3', 'school'];
 
 function banner(ctx, str, y, t, start, color, size = 84) {
   const bp = prog(t, start, 0.6);
@@ -634,11 +633,13 @@ function gradPage(ctx, t, key) {
   g.extras.forEach((k, i) => {
     const im = IMG[k]; const land = im.width > im.height;
     let x, y, bw, bh, r;
-    if (g.extras.length === 1) [x, y, bw, bh, r] = [1340, 625, 760, 800, 0.04];
+    const n = g.extras.length;
+    if (n === 1) [x, y, bw, bh, r] = [1340, 625, 760, 800, 0.04];
+    else if (n === 3) [x, y, bw, bh, r] = [[1140, 420, 600, 450, 0.04], [1650, 470, 440, 520, -0.04], [1390, 830, 640, 420, 0.03]][i];
     else if (i === 0) [x, y, bw, bh, r] = [1250, 520, 820, 600, 0.04];
     else if (land) [x, y, bw, bh, r] = [1560, 830, 600, 440, -0.05];
     else [x, y, bw, bh, r] = [1640, 790, 430, 560, -0.05];
-    sticker(ctx, im, x, y, fit(im, bw, bh), t, { start: 0.7 + i * 0.45, rot: r, seed: 970 + i, tapes: 1 });
+    sticker(ctx, im, x, y, fit(im, bw, bh), t, { start: 0.7 + i * 0.4, rot: r, seed: 970 + i, tapes: 1 });
   });
   banner(ctx, `${g.call}, 너의 꿈을 응원해!`, 118, t, 0.5, g.color, 84);
   const lp = prog(t, 1.5, 0.5);
@@ -706,7 +707,6 @@ SCENES.push({
     // 2부: 단체 사진 + 크레딧
     if (swap > 0) {
       ctx.save(); ctx.globalAlpha = swap;
-      sticker(ctx, IMG.group3, W / 2, 480, 500, t, { start: 7.4, rot: -0.02, seed: 1003 });
       const lines = [
         ['2026 졸업을 축하합니다', 76, C.red],
         ['하준 · 근호 · 주원 · 규연 · 유건 · 태연 · 유민', 60, C.ink],
@@ -714,14 +714,14 @@ SCENES.push({
       ];
       const cp = prog(t, 8.3, 0.6);
       if (cp > 0) {
-        ctx.save(); ctx.translate(W / 2, 170); ctx.rotate(-0.01); ctx.scale(easeOutBack(cp), easeOutBack(cp));
+        ctx.save(); ctx.translate(W / 2, 300); ctx.rotate(-0.01); ctx.scale(easeOutBack(cp), easeOutBack(cp));
         ctx.shadowColor = 'rgba(40,25,10,0.4)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10;
         ctx.fillStyle = 'rgba(255,250,238,0.94)'; ctx.fillRect(-640, -150, 1280, 300); ctx.shadowColor = 'transparent';
         sketch(ctx, shp.rect(-640, -150, 1280, 300), { width: 3.5, seed: 1010, t });
         tape(ctx, -560, -150, 150, -0.4, 1011); tape(ctx, 560, -150, 150, 0.4, 1012);
         ctx.restore();
       }
-      lines.forEach(([s, size, color], i) => text(ctx, s, W / 2, 80 + i * 88, { size, font: 'Single Day', weight: 400, color, reveal: prog(t, 8.7 + i * 0.9, 0.9) }));
+      lines.forEach(([s, size, color], i) => text(ctx, s, W / 2, 210 + i * 88, { size, font: 'Single Day', weight: 400, color, reveal: prog(t, 8.7 + i * 0.9, 0.9) }));
       ctx.restore();
     }
     // 마지막 페이드아웃

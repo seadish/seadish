@@ -30,3 +30,5 @@ mk "졸업복 단체2.JPG" group2 --edge rect --crop 3:2 --focus 0.5,0.55 --seed
 mk "졸업복 단체3.JPG" group3 --edge rect --crop 3:2 --focus 0.5,0.55 --seed 24
 # 학교 사진은 v3 모습(수채화 질감) 유지
 python3 "$T" "$R/IMG_3590.JPG" "$O/school.png" --edge rect --crop 16:9 --focus 0.5,0.5 --seed 25 --size 1300 >/dev/null && echo school
+mk "규연 추가0.JPG" gyuyeon_keys --edge rect --seed 31
+mk "유민 추가0.jpg" yumin_pottery --edge rect --seed 32
