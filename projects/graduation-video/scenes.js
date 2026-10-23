@@ -191,7 +191,7 @@ const SCENES = [
   // ---------- 2장 근호 ----------
   {
     key: 'geunho', dur: 12,
-    narr: "두 번째 아이, 근호의 씨앗은 사람들을 모으는 힘을 가졌어요. 전교회장이 된 근호가 의사봉을 '탕' 치면, 모두의 의견이 하나로 모였답니다.",
+    narr: "두 번째 아이, 근호의 씨앗은 사람들을 모으는 힘을 가졌어요. 전교회장 근호는 친구들의 목소리에 귀 기울이고, 다 함께 정한 약속을 의사봉 '탕!'으로 알렸답니다.",
     draw(ctx, t, dur) {
       chapterBase(ctx, t, dur, { num: 2, name: '근호', title: '우리 학교 전교회장', color: C.blue, main: 'geunho1', mainW: 560, mainY: 400, second: null });
       sticker(ctx, IMG.geunho_council, 1330, 600, 600, t, { start: 1.0, rot: 0.04, seed: 120 });
@@ -204,19 +204,31 @@ const SCENES = [
         const angle = r() * Math.PI * 2;
         const p = prog(t, 1.6 + i * 0.18, 0.4);
         if (p <= 0 || merge >= 1) return;
-        const x = lerp(sx + Math.cos(t + angle) * 10, 1330, merge), y = lerp(sy + Math.sin(t * 1.3 + angle) * 8, 230, merge);
+        const x = lerp(sx + Math.cos(t + angle) * 10, 1640, merge), y = lerp(sy + Math.sin(t * 1.3 + angle) * 8, 215, merge);
         ctx.save(); ctx.globalAlpha = 1 - merge * merge; ctx.translate(x, y); ctx.scale(easeOutBack(p) * (1 - merge * 0.6), easeOutBack(p) * (1 - merge * 0.6));
         bubble(ctx, 0, 0, 120, 74, t, { seed: 131 + i, tail: [-0.2, 1] });
         text(ctx, w, 0, 2, { size: 40, font: 'Single Day', weight: 400, color: [C.red, C.blue, C.green, C.purple][i % 4] });
         ctx.restore();
       });
-      const bp = prog(t, 7.1, 0.6);
-      if (bp > 0) {
-        ctx.save(); ctx.translate(1330, 240); ctx.scale(easeOutElastic(bp), easeOutElastic(bp));
-        bubble(ctx, 0, 0, 620, 150, t, { seed: 150, fill: '#fffbe8', tail: [0, 1] });
-        text(ctx, '모두의 의견을 하나로!', 0, 4, { size: 64, font: 'Single Day', weight: 400, color: C.blue });
+      // 투표함: 모두의 의견이 한 표씩
+      const vb = prog(t, 4.6, 0.5);
+      if (vb > 0) {
+        ctx.save(); ctx.translate(1640, 270); ctx.scale(easeOutBack(vb), easeOutBack(vb));
+        const box = shp.rect(-95, -50, 190, 120);
+        wash(ctx, box, '#fff', { alpha: 0.95, seed: 140, t }); wash(ctx, box, C.blue, { alpha: 0.25, seed: 141, t });
+        sketch(ctx, box, { width: 4, seed: 142, t });
+        sketch(ctx, [[-45, -50], [45, -50]], { width: 7, seed: 143, t, color: C.ink });
+        text(ctx, '투표함', 0, 18, { size: 44, font: 'Single Day', weight: 400, color: C.blue });
         ctx.restore();
-        sparkle(ctx, 1000, 170, 0.7, { seed: 151, t }); sparkle(ctx, 1660, 300, 0.6, { seed: 152, t });
+      }
+      const bp = prog(t, 7.3, 0.6);
+      if (bp > 0) {
+        ctx.save(); ctx.translate(1220, 250); ctx.scale(easeOutElastic(bp), easeOutElastic(bp));
+        bubble(ctx, 0, 0, 560, 150, t, { seed: 150, fill: '#fffbe8', tail: [0.3, 1] });
+        text(ctx, '다 함께 정했어요!', 0, 4, { size: 66, font: 'Single Day', weight: 400, color: C.blue });
+        ctx.restore();
+        popText(ctx, '찬성!', 1640, 385, t - 7.6, { size: 50, color: C.green });
+        sparkle(ctx, 930, 180, 0.7, { seed: 151, t }); sparkle(ctx, 1780, 360, 0.6, { seed: 152, t });
       }
       // 의사봉: 들었다가 '탕!'
       const lift = tt => tt < 1.0 ? -0.35 * easeOut(clamp(tt / 1.0)) : tt < 1.12 ? lerp(-0.35, 0.06, (tt - 1.0) / 0.12) : 0.06 * Math.max(0, 1 - (tt - 1.12) * 4);
@@ -234,7 +246,7 @@ const SCENES = [
     key: 'juwon', dur: 12,
     narr: '세 번째 아이, 주원이의 씨앗은 세 갈래로 싹을 틔웠어요. 책을 펴면 척척박사, 운동장에선 축구왕. 게다가 노래까지 잘하는 우리 반 대표 보컬이랍니다.',
     draw(ctx, t, dur) {
-      chapterBase(ctx, t, dur, { num: 3, name: '주원', title: '삼박자 만능 보컬', color: C.purple, main: 'juwon2', second: 'gyuyeon_juwon_sports', secondAt: 8.2 });
+      chapterBase(ctx, t, dur, { num: 3, name: '주원', title: '삼박자 만능 보컬', color: C.purple, main: 'juwon2', second: 'juwon1', secondAt: 8.2 });
       // 책: 척척박사
       prop(ctx, 'book', 1110, 600, 330, t, { start: 1.6, rot: -0.08, motion: tt => ({ dy: Math.sin(tt * 2) * 8 }) });
       if (t > 2.4) {
@@ -454,13 +466,14 @@ const SCENES = [
   },
 
   // ---------- 에필로그 ----------
+  // 1쪽: 무대 위 일곱 친구와 나무 7그루 → (종이 찢기) → 2쪽: 큰 숲과 곳곳의 얼굴, 축하 배너
   {
     key: 'epilogue', dur: 16,
     narr: '그렇게 1년이 지나, 일곱 개의 씨앗은 일곱 그루의 나무가 되었어요. 그리고 오늘, 아이들은 새로운 숲을 향해 떠납니다. 졸업을 축하해, 우리 일곱 친구들!',
     subTail: 3.0,
-    draw(ctx, t, dur) {
+    pageAt: 6.6,
+    drawStage(ctx, t) {
       drawPaper(ctx); ambient(ctx, t, 77);
-      // 무대 커튼
       const cp = easeOut(prog(t, 0.6, 1.2));
       [[-1, 0], [1, W]].forEach(([dir, edge], i) => {
         const pts = [[edge, 0]];
@@ -471,26 +484,16 @@ const SCENES = [
         sketch(ctx, pts.slice(1, -1), { width: 4, seed: 702 + i, t });
       });
       wash(ctx, shp.rect(0, 0, W, 60), C.red, { alpha: 0.9, seed: 704, t });
-      // 일곱 그루 나무 → 숲
-      const toForest = easeInOut(prog(t, 6.6, 1.2));
+      // 일곱 그루 나무
       for (let i = 0; i < 7; i++) {
         const gp = easeOut(prog(t, 2.6 + i * 0.25, 1.0)); if (gp <= 0) continue;
         const x = 330 + i * 210, base = 960;
         ctx.save(); ctx.translate(x, base); ctx.scale(gp, gp); ctx.translate(-x, -base);
-        prop(ctx, 'tree', x, base, 210, t, { start: 2.6 + i * 0.25, anchor: 'bottom', alpha: 1 - toForest, motion: tt => ({ r: Math.sin(tt * 1.5 + i) * 0.03 }) });
+        prop(ctx, 'tree', x, base, 210, t, { start: 2.6 + i * 0.25, anchor: 'bottom', motion: tt => ({ r: Math.sin(tt * 1.5 + i) * 0.03 }) });
         ctx.restore();
       }
-      if (toForest > 0) {
-        [250, 720, 1200, 1670].forEach((x, i) => {
-          ctx.save(); ctx.globalAlpha = toForest;
-          prop(ctx, 'forest', x, 1150 + (i % 2) * 25, 520, t, { start: 6.6 + i * 0.12, anchor: 'bottom' });
-          ctx.restore();
-        });
-      }
-      // 무대 바닥
       sketch(ctx, [[140, 640], [1780, 640]], { width: 5, seed: 705, t, color: C.brown });
       wash(ctx, [[140, 640], [1780, 640], [1860, 700], [60, 700]], C.brown, { alpha: 0.45, seed: 706, t });
-      // 일곱 친구 (근호가 무대를 열고, 순서대로 등장)
       const order = ['geunho', 'hajun', 'juwon', 'gyuyeon', 'yugeon', 'taeyeon', 'yumin'];
       order.forEach((k, i) => {
         const x = 330 + i * 210, y = 470 + (i % 2) * 30;
@@ -498,39 +501,40 @@ const SCENES = [
         const mini = { geunho: ['gavel', 120], hajun: ['drum', 140], juwon: ['mic', 50], gyuyeon: ['laptop', 130], yugeon: ['baseball', 150], taeyeon: ['bass', 60], yumin: ['dancer', 90] }[k];
         prop(ctx, mini[0], x, y + 150, mini[1], t, { start: 2.4 + i * 0.3, anchor: 'bottom', rot: (i % 2 ? 0.08 : -0.08), motion: tt => ({ r: Math.sin(tt * 4 + i) * 0.06 }) });
       });
-      // 음표들
       if (t > 3.5) for (let k = 0; k < 6; k++) {
         const ph = ((t - 3.5) * 0.35 + k / 6) % 1;
         note(ctx, 400 + k * 230 + Math.sin(ph * 6 + k) * 30, 380 - ph * 220, 0.8, { seed: 740 + k, t, color: [C.red, C.purple, C.teal, C.orange, C.pink, C.blue][k] });
       }
-      // 유건의 홈런 불꽃놀이
-      const bx0 = 330 + 4 * 210, by0 = 595;
-      const fly = prog(t, 8.2, 0.9);
-      if (fly > 0 && fly < 1) {
-        const x = lerp(bx0, 960, easeOut(fly)), y = lerp(by0, 190, easeOut(fly));
-        const b = shp.circle(x, y, 22, 18);
-        wash(ctx, b, '#fff', { alpha: 1, seed: 750, t }); sketch(ctx, b, { width: 3, seed: 751, t });
-      }
-      const boom = prog(t, 9.1, 1.4);
-      if (boom > 0 && boom < 1) {
-        for (let k = 0; k < 16; k++) {
-          const a = k / 16 * Math.PI * 2, R = 60 + 260 * easeOut(boom);
+    },
+    drawForest(ctx, t) {
+      const t0 = this.pageAt;
+      drawPaper(ctx); ambient(ctx, t, 88);
+      // 큰 숲 한 장
+      prop(ctx, 'forest', W / 2, 590, 860, t, { start: t0 + 0.2, motion: tt => ({ s: 1 + Math.sin(tt * 0.8) * 0.01 }) });
+      // 곳곳의 얼굴 배지
+      const spots = { geunho: [330, 450], hajun: [1590, 450], juwon: [610, 330], gyuyeon: [1310, 330], yugeon: [440, 770], taeyeon: [1480, 770], yumin: [960, 820] };
+      Object.entries(spots).forEach(([k, [x, y]], i) => face(ctx, IMG['face_' + k], x, y, 78, t, { start: t0 + 0.7 + i * 0.22, seed: 850 + i }));
+      // 불꽃놀이
+      [[520, 250, t0 + 1.8], [1400, 250, t0 + 2.4], [960, 120, t0 + 5.4]].forEach(([cx, cy, st], j) => {
+        const boom = prog(t, st, 1.4);
+        if (boom <= 0 || boom >= 1) return;
+        for (let k = 0; k < 14; k++) {
+          const a = k / 14 * Math.PI * 2, R = 40 + 200 * easeOut(boom);
           ctx.save(); ctx.globalAlpha = 1 - boom;
-          sparkle(ctx, 960 + Math.cos(a) * R, 190 + Math.sin(a) * R * 0.7, 0.6, { seed: 760 + k, t, color: [C.yellow, C.red, C.pink, C.teal][k % 4] });
+          sparkle(ctx, cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.75, 0.6, { seed: 760 + j * 20 + k, t, color: [C.yellow, C.red, C.pink, C.teal][k % 4] });
           ctx.restore();
         }
-      }
+      });
       // 축하 배너
       const bp = prog(t, 9.6, 0.7);
       if (bp > 0) {
-        ctx.save(); ctx.translate(W / 2, 190); ctx.rotate(-0.02); ctx.scale(easeOutBack(bp), easeOutBack(bp));
+        ctx.save(); ctx.translate(W / 2, 150); ctx.rotate(-0.02); ctx.scale(easeOutBack(bp), easeOutBack(bp));
         const band = [[-720, -100], [720, -90], [690, 0], [720, 100], [-720, 92], [-690, 0]];
         ctx.shadowColor = 'rgba(60,40,20,0.35)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 10;
         ctx.fillStyle = '#fffaf0'; ctx.beginPath(); band.forEach(([x, y], j) => j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fill();
         ctx.shadowColor = 'transparent';
         sketch(ctx, [...band, band[0]], { width: 4, seed: 810, t });
         tape(ctx, -640, -95, 140, -0.5, 811); tape(ctx, 640, -95, 140, 0.5, 812);
-        // 학사모
         ctx.save(); ctx.translate(-600, -10); ctx.rotate(-0.15);
         const cap = [[-60, -10], [0, -40], [60, -10], [0, 20], [-60, -10]];
         wash(ctx, cap, C.ink, { alpha: 0.95, seed: 813, t }); sketch(ctx, cap, { width: 3, seed: 814, t });
@@ -538,14 +542,14 @@ const SCENES = [
         sketch(ctx, [[40, -6], [52, 40]], { width: 3, seed: 816, t, color: C.yellow });
         ctx.restore();
         ctx.restore();
-        popText(ctx, '졸업을 축하합니다!', W / 2 + 60, 190, t - 9.9, { size: 100, color: C.red, stagger: 0.07 });
+        popText(ctx, '졸업을 축하합니다!', W / 2 + 60, 150, t - 9.9, { size: 100, color: C.red, stagger: 0.07 });
       }
       // 꽃가루
       if (t > 10) {
         for (let k = 0; k < 40; k++) {
           const r = rng(900 + k);
           const x = r() * W, sp = 120 + r() * 160;
-          const y = ((t - 10) * sp + r() * -400) ; if (y < -20 || y > H) continue;
+          const y = (t - 10) * sp + r() * -400; if (y < -20 || y > H) continue;
           ctx.save(); ctx.translate(x + Math.sin(t * 2 + k) * 30, y); ctx.rotate(t * 3 * (r() - 0.5));
           ctx.fillStyle = [C.red, C.yellow, C.blue, C.green, C.pink, C.purple][k % 6];
           ctx.fillRect(-8, -5, 16, 10);
@@ -553,8 +557,20 @@ const SCENES = [
         }
       }
     },
+    draw(ctx, t, dur) {
+      if (t < this.pageAt) return this.drawStage(ctx, t);
+      this.drawForest(ctx, t);
+      const p = (t - this.pageAt) / TRANSITION;
+      if (p < 1) {
+        epiBuf = epiBuf || Object.assign(document.createElement('canvas'), { width: W, height: H });
+        const b = epiBuf.getContext('2d');
+        b.save(); this.drawStage(b, t); b.restore();
+        tornTransition(ctx, epiBuf, p, 41);
+      }
+    },
   },
 ];
+let epiBuf = null;
 
 // 시작 시각 계산
 let TOTAL = 0;

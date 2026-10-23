@@ -275,7 +275,8 @@ function chapterTitle(ctx, num, name, t, o = {}) {
 // ---------- 자막 ----------
 // 문장을 길이 비례로 나눠 시간 배정
 function splitSentences(str) {
-  return str.match(/[^.!?…]+[.!?…]*/g).map(s => s.trim()).filter(Boolean);
+  // 문장 끝 부호 뒤에 공백이 올 때만 끊는다 ('탕!'으로 같은 인용은 그대로)
+  return str.split(/(?<=[.!?…])\s+/).map(s => s.trim()).filter(Boolean);
 }
 function subtitleAt(narr, t, dur, lead = 0.7, tail = 0.5) {
   const ss = splitSentences(narr);
