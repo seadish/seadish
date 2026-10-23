@@ -16,6 +16,8 @@ function loadImages() {
   CUT_KEYS.forEach(k => load(k, `images/cut/${k}.png`));
   FACE_KEYS.forEach(k => load('face_' + k, `images/faces/${k}.png`));
   PROP_KEYS.forEach(k => load(k, `images/props/${k}.png`));
+  GRAD_KEYS.forEach(k => load(k, `images/grad/${k}.png`));
+  load('ending_bg1', 'images/ending/bg1.png'); load('ending_bg2', 'images/ending/bg2.png');
   return Promise.all(jobs);
 }
 const PROP_KEYS = ['drum', 'gavel', 'soccer', 'book', 'laptop', 'baseball', 'masks', 'bass', 'pottery', 'dancer', 'mic',
@@ -107,21 +109,17 @@ const SCENES = [
         }
       }
       ctx.restore();
-      // 교실 낙서
-      const cp = prog(t, 3.1, 1.4);
-      const X0 = 300, X1 = 1620, Y0 = 330, Y1 = 800;
-      sketch(ctx, [[X0, Y1], [X0, Y0], [W / 2, Y0 - 110], [X1, Y0], [X1, Y1], [X0, Y1]], { width: 5, seed: 11, t, progress: cp, color: C.pencil });
-      if (cp > 0.6) {
-        const wp = prog(t, 3.9, 0.8);
-        [[420, 400], [1380, 400]].forEach(([x, y], i) => {
-          sketch(ctx, shp.rect(x, y, 120, 90), { width: 3, seed: 20 + i, t, progress: wp });
-          sketch(ctx, [[x + 60, y], [x + 60, y + 90]], { width: 2.5, seed: 22 + i, t, progress: wp });
-          wash(ctx, shp.rect(x, y, 120, 90), C.blue, { alpha: 0.35 * wp, seed: 24 + i, t });
-        });
-        // 칠판
-        sketch(ctx, shp.rect(760, 360, 400, 120), { width: 4, seed: 30, t, progress: wp });
-        wash(ctx, shp.rect(760, 360, 400, 120), C.green, { alpha: 0.55 * wp, seed: 31, t });
-        text(ctx, '6학년 우리 반', W / 2, 422, { size: 52, font: 'Nanum Pen Script', weight: 400, color: '#fff', reveal: prog(t, 4.4, 0.8) });
+      // 우리 학교 사진
+      sticker(ctx, IMG.school, W / 2, 455, 1000, t, { start: 3.1, rot: -0.02, seed: 11 });
+      const lp = prog(t, 4.2, 0.5);
+      if (lp > 0) {
+        ctx.save(); ctx.translate(560, 255); ctx.rotate(-0.08); ctx.scale(easeOutBack(lp), easeOutBack(lp));
+        ctx.shadowColor = 'rgba(60,40,20,0.3)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 5;
+        ctx.fillStyle = '#fff6d8'; ctx.fillRect(-190, -48, 380, 96); ctx.shadowColor = 'transparent';
+        sketch(ctx, shp.rect(-190, -48, 380, 96), { width: 3, seed: 12, t });
+        text(ctx, '6학년 우리 반', 0, 4, { size: 64, font: 'Single Day', weight: 400, color: C.green });
+        tape(ctx, 0, -48, 120, 0.05, 13);
+        ctx.restore();
       }
       // 일곱 아이
       FACE_KEYS.forEach((k, i) => {
@@ -571,6 +569,154 @@ const SCENES = [
   },
 ];
 let epiBuf = null;
+
+
+// ==================== 졸업 사진 페이지 ====================
+// 각 장의 나레이션이 끝나면 페이지가 찢어지며 졸업복 사진 페이지로 넘어간다.
+const GRAD_DUR = 4.6;
+const GRAD = {
+  hajun: { call: '하준아', line: '미래의 멋진 드러머', color: C.red, main: 'hajun_g1', extras: ['hajun_drum', 'hajun_g2'] },
+  geunho: { call: '근호야', line: '친구들의 목소리를 듣는 리더', color: C.blue, main: 'geunho_g1', extras: ['geunho_g3', 'geunho_g2'] },
+  juwon: { call: '주원아', line: '척척박사 축구왕, 우리 반 보컬', color: C.purple, main: 'juwon_g1', extras: ['juwon_vocal', 'juwon_g2'] },
+  gyuyeon: { call: '규연아', line: 'AI보다 반짝이는 생각', color: C.teal, main: 'gyuyeon_g1', extras: ['gyuyeon_g2', 'gyuyeon_juwon'] },
+  yugeon: { call: '유건아', line: '바람처럼 달려 야구왕으로', color: C.green, main: 'yugeon_g1', extras: ['yugeon_g3', 'yugeon_g2'] },
+  taeyeon: { call: '태연아', line: '무대를 빛낼 팔방미인', color: C.pink, main: 'taeyeon_g1', extras: ['taeyeon_bass', 'taeyeon_g2'] },
+  yumin: { call: '유민아', line: '반짝반짝 빛날 우리 스타', color: C.orange, main: 'yumin_g1', extras: ['yumin_g2'] },
+};
+const GRAD_KEYS = ['hajun_g1', 'hajun_g2', 'hajun_drum', 'geunho_g1', 'geunho_g2', 'geunho_g3', 'juwon_g1', 'juwon_g2', 'juwon_vocal',
+  'gyuyeon_g1', 'gyuyeon_g2', 'gyuyeon_juwon', 'yugeon_g1', 'yugeon_g2', 'yugeon_g3', 'taeyeon_g1', 'taeyeon_g2', 'taeyeon_bass',
+  'yumin_g1', 'yumin_g2', 'group1', 'group2', 'group3', 'school'];
+
+function banner(ctx, str, y, t, start, color, size = 84) {
+  const bp = prog(t, start, 0.6);
+  if (bp <= 0) return;
+  ctx.save(); ctx.translate(W / 2, y); ctx.rotate(-0.015); ctx.scale(easeOutBack(bp), easeOutBack(bp));
+  const band = [[-760, -95], [760, -86], [730, 0], [760, 95], [-760, 88], [-730, 0]];
+  ctx.shadowColor = 'rgba(60,40,20,0.3)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 8;
+  ctx.fillStyle = '#fffaf0'; ctx.beginPath(); band.forEach(([x, yy], j) => j ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy)); ctx.closePath(); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  sketch(ctx, [...band, band[0]], { width: 4, seed: 900 + size, t });
+  tape(ctx, -680, -90, 140, -0.5, 901); tape(ctx, 680, -90, 140, 0.5, 902);
+  // 학사모
+  ctx.save(); ctx.translate(-640, -6); ctx.rotate(-0.15);
+  const cap = [[-56, -10], [0, -38], [56, -10], [0, 18], [-56, -10]];
+  wash(ctx, cap, C.ink, { alpha: 0.95, seed: 903, t }); sketch(ctx, cap, { width: 3, seed: 904, t });
+  wash(ctx, shp.rect(-32, 4, 64, 34), C.ink, { alpha: 0.95, seed: 905, t });
+  sketch(ctx, [[38, -6], [50, 38]], { width: 3, seed: 906, t, color: C.yellow });
+  ctx.restore();
+  ctx.restore();
+  popText(ctx, str, W / 2 + 50, y, t - start - 0.25, { size, color, stagger: 0.05 });
+}
+
+function confetti(ctx, t, seed, n = 36) {
+  for (let k = 0; k < n; k++) {
+    const r = rng(seed + k);
+    const x = r() * W, sp = 110 + r() * 150;
+    const y = t * sp - 60 - r() * 500; if (y < -20 || y > H) continue;
+    ctx.save(); ctx.translate(x + Math.sin(t * 2 + k) * 30, y); ctx.rotate(t * 3 * (r() - 0.5));
+    ctx.fillStyle = [C.red, C.yellow, C.blue, C.green, C.pink, C.purple][k % 6];
+    ctx.fillRect(-8, -5, 16, 10);
+    ctx.restore();
+  }
+}
+
+function gradPage(ctx, t, key) {
+  const g = GRAD[key];
+  drawPaper(ctx); ambient(ctx, t, 300 + key.length);
+  // 은은한 빛
+  const glow = ctx.createRadialGradient(700, 560, 50, 700, 560, 650);
+  glow.addColorStop(0, 'rgba(255,230,160,0.35)'); glow.addColorStop(1, 'rgba(255,230,160,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+  const main = IMG[g.main];
+  const mh = 640, mw = Math.min(620, mh * main.width / main.height);
+  sticker(ctx, main, 640, 575, mw, t, { start: 0.25, rot: -0.04, seed: 960 + key.length });
+  const slots = [[1370, 470, 0.05], [1470, 800, -0.06]];
+  g.extras.forEach((k, i) => {
+    const im = IMG[k]; const land = im.width > im.height;
+    const w = i === 0 ? (land ? 600 : 400) : (land ? 470 : 300);
+    const [x, y, r] = g.extras.length === 1 ? [1380, 590, 0.05] : slots[i];
+    sticker(ctx, im, x, y, w, t, { start: 0.7 + i * 0.45, rot: r, seed: 970 + i, tapes: 1 });
+  });
+  banner(ctx, `${g.call}, 너의 꿈을 응원해!`, 118, t, 0.9, g.color, 84);
+  text(ctx, g.line, 640, 960, { size: 64, font: 'Nanum Pen Script', weight: 400, color: g.color, reveal: prog(t, 1.6, 0.7), rot: -0.03 });
+  sparkle(ctx, 300, 300, 0.8, { seed: 980, t }); sparkle(ctx, 1000, 260, 0.6, { seed: 981, t }); sparkle(ctx, 1780, 600, 0.7, { seed: 982, t });
+  confetti(ctx, t, 990);
+}
+
+// 장면에 졸업 사진 페이지를 붙인다
+let gradBuf = null;
+SCENES.forEach(s => {
+  if (!GRAD[s.key]) return;
+  const orig = s.draw.bind(s);
+  s.narrDur = s.dur;
+  s.dur = s.narrDur + GRAD_DUR;
+  s.draw = (ctx, t) => {
+    if (t < s.narrDur) return orig(ctx, t, s.narrDur);
+    const tg = t - s.narrDur;
+    gradPage(ctx, tg, s.key);
+    const p = tg / TRANSITION;
+    if (p < 1) {
+      gradBuf = gradBuf || Object.assign(document.createElement('canvas'), { width: W, height: H });
+      const b = gradBuf.getContext('2d');
+      b.save(); orig(b, t, s.narrDur); b.restore();
+      tornTransition(ctx, gradBuf, p, 53);
+    }
+  };
+});
+
+// ==================== 엔딩 크레딧 ====================
+function coverImage(ctx, img, zoom, alpha = 1) {
+  const s = Math.max(W / img.width, H / img.height) * zoom;
+  ctx.save(); ctx.globalAlpha *= alpha;
+  ctx.drawImage(img, (W - img.width * s) / 2, (H - img.height * s) / 2, img.width * s, img.height * s);
+  ctx.restore();
+}
+SCENES.push({
+  key: 'ending', dur: 15,
+  narr: '',
+  draw(ctx, t, dur) {
+    drawPaper(ctx);
+    // 1부: 들판 배경 + 졸업 단체 사진
+    const swap = easeInOut(prog(t, 7.0, 1.4));
+    coverImage(ctx, IMG.ending_bg1, 1.04 + t * 0.006, 1);
+    if (swap > 0) coverImage(ctx, IMG.ending_bg2, 1.1 - (t - 7) * 0.006, swap);
+    // 따뜻한 빛 + 비네팅
+    const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 1.0);
+    v.addColorStop(0, 'rgba(255,240,210,0.08)'); v.addColorStop(1, 'rgba(60,40,20,0.45)');
+    ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+    if (swap < 1) {
+      ctx.save(); ctx.globalAlpha = 1 - swap;
+      sticker(ctx, IMG.group1, 560, 470, 760, t, { start: 0.8, rot: -0.06, seed: 1001 });
+      sticker(ctx, IMG.group2, 1370, 600, 760, t, { start: 1.8, rot: 0.05, seed: 1002 });
+      text(ctx, '함께여서 행복했던 1년', W / 2, 940, { size: 84, font: 'Single Day', weight: 400, color: '#fff', reveal: prog(t, 3.0, 1.0), outline: { width: 10, color: 'rgba(59,47,42,0.55)' } });
+      ctx.restore();
+    }
+    // 2부: 단체 사진 + 크레딧
+    if (swap > 0) {
+      ctx.save(); ctx.globalAlpha = swap;
+      sticker(ctx, IMG.group3, W / 2, 400, 900, t, { start: 7.4, rot: -0.02, seed: 1003 });
+      const lines = [
+        ['2026 졸업을 축하합니다', 76, C.red],
+        ['하준 · 근호 · 주원 · 규연 · 유건 · 태연 · 유민', 60, C.ink],
+        ['우리의 다음 이야기를 응원해!', 60, C.green],
+      ];
+      const cp = prog(t, 8.3, 0.6);
+      if (cp > 0) {
+        ctx.save(); ctx.translate(W / 2, 885); ctx.rotate(-0.01); ctx.scale(easeOutBack(cp), easeOutBack(cp));
+        ctx.shadowColor = 'rgba(40,25,10,0.4)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10;
+        ctx.fillStyle = 'rgba(255,250,238,0.94)'; ctx.fillRect(-640, -150, 1280, 300); ctx.shadowColor = 'transparent';
+        sketch(ctx, shp.rect(-640, -150, 1280, 300), { width: 3.5, seed: 1010, t });
+        tape(ctx, -560, -150, 150, -0.4, 1011); tape(ctx, 560, -150, 150, 0.4, 1012);
+        ctx.restore();
+      }
+      lines.forEach(([s, size, color], i) => text(ctx, s, W / 2, 795 + i * 88, { size, font: 'Single Day', weight: 400, color, reveal: prog(t, 8.7 + i * 0.9, 0.9) }));
+      ctx.restore();
+    }
+    // 마지막 페이드아웃
+    const fo = prog(t, dur - 1.6, 1.6);
+    if (fo > 0) { ctx.fillStyle = `rgba(20,14,10,${fo})`; ctx.fillRect(0, 0, W, H); }
+  },
+});
 
 // 시작 시각 계산
 let TOTAL = 0;

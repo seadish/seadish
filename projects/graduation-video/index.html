@@ -29,7 +29,7 @@ const bctx = buf.getContext('2d');
 function drawScene(c, i, local) {
   const s = SCENES[i];
   c.save(); s.draw(c, local, s.dur); c.restore();
-  c.save(); drawSubtitle(c, s.narr, local, s.dur, { lead: s.subLead ?? 1.1, tail: s.subTail ?? 0.6 }); c.restore();
+  c.save(); if (s.narr) drawSubtitle(c, s.narr, local, s.narrDur ?? s.dur, { lead: s.subLead ?? 1.1, tail: s.subTail ?? 0.6 }); c.restore();
 }
 
 // 시간 t 의 프레임을 그린다

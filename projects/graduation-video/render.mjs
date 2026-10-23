@@ -39,7 +39,11 @@ const grab = async t => {
   return Buffer.from(data.split(',')[1], 'base64');
 };
 
-if (args.stills) {
+if (args.timeline) {
+  const tl = await page.evaluate(() => SCENES.map(s => ({ key: s.key, start: s.start, dur: s.dur, narrDur: s.narrDur ?? s.dur })));
+  fs.writeFileSync(path.join(ROOT, 'out', 'timeline.json'), JSON.stringify({ total, scenes: tl }, null, 1));
+  console.log('timeline 저장');
+} else if (args.stills) {
   for (const t of String(args.stills).split(',').map(Number)) {
     fs.writeFileSync(path.join(ROOT, 'out', `still_${t}.jpg`), await grab(t));
     console.log('still', t);
@@ -47,10 +51,17 @@ if (args.stills) {
 } else {
   const from = +(args.from || 0), to = Math.min(+(args.to || total), total);
   const out = path.join(ROOT, 'out', args.out || 'graduation.mp4');
-  const audio = path.join(ROOT, 'audio', 'narration.wav');
-  const withAudio = fs.existsSync(audio) && !args.noaudio;
+  // 오디오: 배경음악(audio/bgm.wav) + 나레이션(audio/narration.wav). 나레이션이 있으면 음악을 낮춘다
+  const bgm = path.join(ROOT, 'audio', 'bgm.wav'), narr = path.join(ROOT, 'audio', 'narration.wav');
+  const hasBgm = fs.existsSync(bgm) && !args.noaudio, hasNarr = fs.existsSync(narr) && !args.noaudio;
+  const audioIn = [], filters = [];
+  if (hasBgm) { audioIn.push('-ss', String(from), '-i', bgm); filters.push(`[${audioIn.filter(a => a === '-i').length}:a]volume=${hasNarr ? 0.35 : 0.9}[m]`); }
+  if (hasNarr) { audioIn.push('-ss', String(from), '-i', narr); filters.push(`[${audioIn.filter(a => a === '-i').length}:a]volume=1.0[n]`); }
+  const audioArgs = !audioIn.length ? [] : [...audioIn, '-filter_complex',
+    filters.join(';') + ';' + (hasBgm && hasNarr ? '[m][n]amix=inputs=2:duration=first:normalize=0[a]' : hasBgm ? '[m]anull[a]' : '[n]anull[a]'),
+    '-map', '0:v', '-map', '[a]', '-c:a', 'aac', '-b:a', '192k', '-t', String(to - from)];
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
-    ...(withAudio ? ['-ss', String(from), '-i', audio, '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
+    ...audioArgs,
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'medium', '-movflags', '+faststart', out], { stdio: ['pipe', 'inherit', 'inherit'] });
   const n = Math.round((to - from) * FPS);
   const t0 = Date.now();
