@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# 학생 사진은 공개 저장소에 올리지 않음
+projects/graduation-video/images/
