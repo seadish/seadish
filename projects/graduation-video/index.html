@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>일곱 개의 씨앗</title>
+<style>
+  @font-face { font-family: 'Gaegu'; src: url(fonts/Gaegu-Regular.ttf); font-weight: 400; }
+  @font-face { font-family: 'Gaegu'; src: url(fonts/Gaegu-Bold.ttf); font-weight: 700; }
+  @font-face { font-family: 'Jua'; src: url(fonts/Jua.ttf); font-weight: 400; }
+  @font-face { font-family: 'Nanum Pen Script'; src: url(fonts/NanumPenScript.ttf); font-weight: 400; }
+  html, body { margin: 0; background: #222; }
+  canvas { display: block; width: 100vw; max-width: 1920px; height: auto; margin: 0 auto; }
+  #bar { color: #ddd; font: 14px sans-serif; padding: 8px; display: flex; gap: 8px; align-items: center; }
+  #bar input[type=range] { flex: 1; }
+  body.render #bar { display: none; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div id="bar"><button id="play">▶︎ 재생</button><input id="seek" type="range" min="0" step="0.01" value="0"><span id="time">0.0</span></div>
+<audio id="narr" src="audio/narration.wav" preload="auto"></audio>
+<script src="engine.js"></script>
+<script src="scenes.js"></script>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const buf = document.createElement('canvas'); buf.width = W; buf.height = H;
+const bctx = buf.getContext('2d');
+
+function drawScene(c, i, local) {
+  const s = SCENES[i];
+  c.save(); s.draw(c, local, s.dur); c.restore();
+  c.save(); drawSubtitle(c, s.narr, local, s.dur, { lead: s.subLead ?? 1.1, tail: s.subTail ?? 0.6 }); c.restore();
+}
+
+// 시간 t 의 프레임을 그린다
+function seek(t) {
+  t = clamp(t, 0, TOTAL - 1 / 60);
+  let i = SCENES.findIndex(s => t < s.start + s.dur);
+  const local = t - SCENES[i].start;
+  drawScene(ctx, i, local);
+  if (i > 0 && local < TRANSITION) {
+    const prev = SCENES[i - 1];
+    drawScene(bctx, i - 1, prev.dur + local);
+    tornTransition(ctx, buf, local / TRANSITION, i * 7);
+  }
+}
+
+window.ready = (async () => {
+  await document.fonts.load('700 50px "Gaegu"');
+  await document.fonts.load('400 50px "Jua"');
+  await document.fonts.load('400 50px "Nanum Pen Script"');
+  await loadImages();
+  makePaper();
+  seek(0);
+  return { total: TOTAL };
+})();
+window.seek = seek;
+
+// 미리보기 플레이어
+const seekBar = document.getElementById('seek'), timeEl = document.getElementById('time'), audio = document.getElementById('narr');
+let playing = false, t0 = 0, tStart = 0;
+window.ready.then(() => { seekBar.max = TOTAL; });
+seekBar.oninput = () => { tStart = +seekBar.value; seek(tStart); timeEl.textContent = tStart.toFixed(1); audio.currentTime = tStart; };
+document.getElementById('play').onclick = () => {
+  playing = !playing;
+  if (playing) { t0 = performance.now(); audio.currentTime = tStart; audio.play().catch(() => {}); loop(); }
+  else { tStart = +seekBar.value; audio.pause(); }
+};
+function loop() {
+  if (!playing) return;
+  const t = tStart + (performance.now() - t0) / 1000;
+  if (t >= TOTAL) { playing = false; return; }
+  seek(t); seekBar.value = t; timeEl.textContent = t.toFixed(1);
+  requestAnimationFrame(loop);
+}
+if (location.search.includes('render')) document.body.classList.add('render');
+</script>
+</body>
+</html>

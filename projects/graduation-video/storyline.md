@@ -70,3 +70,11 @@
 1. 이미지 소스 받기 (파일명 = 학생 이름, 예: `하준.jpg`, `근호_1.jpg`) → `projects/graduation-video/images/`
 2. 나레이션 음성 준비 (TTS 또는 직접 녹음) 및 문장별 타이밍 확정
 3. 손그림·종이 콜라주 스타일 모션그래픽 제작 (HTML/Canvas → MP4)
+
+## 제작 파일
+
+- `index.html` — 브라우저에서 열면 미리보기 플레이어 (로컬 서버 필요: `python3 -m http.server`)
+- `engine.js` — 손그림 선·수채 채색·스티커·테이프·종이 찢기 전환·자막
+- `scenes.js` — 장면별 연출과 길이(`dur`). 나레이션 음성을 받으면 `dur` 만 맞추면 된다
+- `render.mjs` — `node render.mjs` → `out/graduation.mp4` (`audio/narration.wav` 가 있으면 함께 합침)
+- 학생 사진(`images/`), 음성(`audio/`), 렌더 결과(`out/`)는 공개 저장소에 올리지 않는다
