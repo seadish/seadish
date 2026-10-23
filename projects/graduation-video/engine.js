@@ -155,7 +155,7 @@ function starDoodle(ctx, x, y, r, o = {}) {
 
 // ---------- 텍스트 ----------
 function text(ctx, str, x, y, o = {}) {
-  const { size = 60, font = 'Gaegu', weight = 700, color = C.ink, align = 'center', reveal = 1, rot = 0, alpha = 1, outline = null, base = 'middle' } = o;
+  const { size = 60, font = 'Gamja Flower', weight = 400, color = C.ink, align = 'center', reveal = 1, rot = 0, alpha = 1, outline = null, base = 'middle' } = o;
   if (reveal <= 0 || alpha <= 0) return;
   ctx.save(); ctx.globalAlpha *= alpha;
   ctx.translate(x, y); ctx.rotate(rot);
@@ -172,7 +172,7 @@ function text(ctx, str, x, y, o = {}) {
 }
 // 한 글자씩 톡톡 튀어나오는 텍스트
 function popText(ctx, str, x, y, t, o = {}) {
-  const { size = 80, font = 'Jua', weight = 400, color = C.ink, stagger = 0.06, outline = { width: 10, color: '#fff' } } = o;
+  const { size = 80, font = 'Single Day', weight = 400, color = C.ink, stagger = 0.06, outline = { width: 10, color: '#fff' } } = o;
   ctx.save(); ctx.font = `${weight} ${size}px "${font}"`;
   const chars = [...str]; const widths = chars.map(ch => ctx.measureText(ch).width);
   const total = widths.reduce((a, b) => a + b, 0);
@@ -258,13 +258,13 @@ function chapterTitle(ctx, num, name, t, o = {}) {
   const p = prog(t, 0.15, 0.5);
   if (p <= 0) return;
   ctx.save(); ctx.translate(x, y); ctx.rotate(-0.03); ctx.scale(easeOutBack(p), easeOutBack(p));
-  ctx.font = '400 76px "Jua"'; const nameW = ctx.measureText(name).width;
+  ctx.font = '400 76px "Single Day"'; const nameW = ctx.measureText(name).width;
   const w = nameW + 210, h = 110, x0 = -w / 2;
   const band = [[x0, -h / 2], [w / 2, -h / 2 + 6], [w / 2 - 20, 0], [w / 2, h / 2], [x0, h / 2 - 4], [x0 + 20, 0]];
   wash(ctx, band, color, { alpha: 0.95, seed: num + 50, t, spread: 3 });
   sketch(ctx, [...band, band[0]], { width: 3, seed: num + 51, t, color: C.ink });
-  text(ctx, `${num}장`, x0 + 75, 4, { size: 50, font: 'Jua', weight: 400, color: '#fff' });
-  text(ctx, name, x0 + 130, 4, { size: 76, font: 'Jua', weight: 400, color: '#fff', align: 'left', outline: { width: 6, color: 'rgba(59,47,42,0.6)' } });
+  text(ctx, `${num}장`, x0 + 75, 4, { size: 50, font: 'Single Day', weight: 400, color: '#fff' });
+  text(ctx, name, x0 + 130, 4, { size: 76, font: 'Single Day', weight: 400, color: '#fff', align: 'left', outline: { width: 6, color: 'rgba(59,47,42,0.6)' } });
   ctx.restore();
 }
 
@@ -299,7 +299,7 @@ function drawSubtitle(ctx, narr, t, dur, o = {}) {
   const { s } = cur;
   const fadeIn = clamp((t - cur.t0) / 0.25);
   ctx.save();
-  ctx.font = `700 50px "Gaegu"`;
+  ctx.font = `400 54px "Gamja Flower"`;
   const lines = wrapLines(ctx, s, 1500);
   const lh = 58, bh = lines.length * lh + 34;
   const bw = Math.max(...lines.map(l => ctx.measureText(l).width)) + 90;
@@ -312,7 +312,7 @@ function drawSubtitle(ctx, narr, t, dur, o = {}) {
   ctx.fillStyle = 'rgba(255,252,244,0.95)'; ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fill();
   ctx.shadowColor = 'transparent';
   tape(ctx, W / 2 - bw / 2 + 10, y - bh / 2 + 6, 90, -0.6, 5, 'rgba(160,200,220,0.7)');
-  lines.forEach((l, i) => text(ctx, l, W / 2, y - (lines.length - 1) * lh / 2 + i * lh + 3, { size: 50, color: C.ink }));
+  lines.forEach((l, i) => text(ctx, l, W / 2, y - (lines.length - 1) * lh / 2 + i * lh + 3, { size: 54, color: C.ink }));
   ctx.restore();
 }
 

@@ -180,7 +180,7 @@ const SCENES = [
         ctx.shadowColor = 'rgba(60,40,20,0.3)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 6;
         ctx.fillStyle = '#fff6d8'; ctx.fillRect(-240, -60, 480, 120); ctx.shadowColor = 'transparent';
         sketch(ctx, shp.rect(-240, -60, 480, 120), { width: 3.5, seed: 95, t });
-        text(ctx, 'COMING SOON!', 0, 4, { size: 72, font: 'Jua', weight: 400, color: C.red });
+        text(ctx, 'COMING SOON!', 0, 4, { size: 72, font: 'Single Day', weight: 400, color: C.red });
         tape(ctx, -200, -60, 110, -0.4, 96); tape(ctx, 200, -60, 110, 0.4, 97);
         ctx.restore();
         sparkle(ctx, 1060, 250, 0.8, { seed: 98, t }); sparkle(ctx, 1620, 300, 0.7, { seed: 99, t });
@@ -207,14 +207,14 @@ const SCENES = [
         const x = lerp(sx + Math.cos(t + angle) * 10, 1330, merge), y = lerp(sy + Math.sin(t * 1.3 + angle) * 8, 230, merge);
         ctx.save(); ctx.globalAlpha = 1 - merge * merge; ctx.translate(x, y); ctx.scale(easeOutBack(p) * (1 - merge * 0.6), easeOutBack(p) * (1 - merge * 0.6));
         bubble(ctx, 0, 0, 120, 74, t, { seed: 131 + i, tail: [-0.2, 1] });
-        text(ctx, w, 0, 2, { size: 40, font: 'Jua', weight: 400, color: [C.red, C.blue, C.green, C.purple][i % 4] });
+        text(ctx, w, 0, 2, { size: 40, font: 'Single Day', weight: 400, color: [C.red, C.blue, C.green, C.purple][i % 4] });
         ctx.restore();
       });
       const bp = prog(t, 7.1, 0.6);
       if (bp > 0) {
         ctx.save(); ctx.translate(1330, 240); ctx.scale(easeOutElastic(bp), easeOutElastic(bp));
         bubble(ctx, 0, 0, 620, 150, t, { seed: 150, fill: '#fffbe8', tail: [0, 1] });
-        text(ctx, '모두의 의견을 하나로!', 0, 4, { size: 64, font: 'Jua', weight: 400, color: C.blue });
+        text(ctx, '모두의 의견을 하나로!', 0, 4, { size: 64, font: 'Single Day', weight: 400, color: C.blue });
         ctx.restore();
         sparkle(ctx, 1000, 170, 0.7, { seed: 151, t }); sparkle(ctx, 1660, 300, 0.6, { seed: 152, t });
       }
@@ -238,7 +238,7 @@ const SCENES = [
       // 책: 척척박사
       prop(ctx, 'book', 1110, 600, 330, t, { start: 1.6, rot: -0.08, motion: tt => ({ dy: Math.sin(tt * 2) * 8 }) });
       if (t > 2.4) {
-        for (let k = 0; k < 3; k++) { const ph = ((t - 2.4) * 0.5 + k / 3) % 1; text(ctx, ['A+', '?', '!'][k], 1040 + k * 80, 470 - ph * 120, { size: 52, font: 'Jua', weight: 400, color: [C.blue, C.teal, C.red][k], alpha: 1 - ph }); }
+        for (let k = 0; k < 3; k++) { const ph = ((t - 2.4) * 0.5 + k / 3) % 1; text(ctx, ['A+', '?', '!'][k], 1040 + k * 80, 470 - ph * 120, { size: 52, font: 'Single Day', weight: 400, color: [C.blue, C.teal, C.red][k], alpha: 1 - ph }); }
         popText(ctx, '척척박사!', 1110, 800, t - 3.0, { size: 64, color: C.blue });
       }
       // 축구공: 굴러 들어와 통통
@@ -287,13 +287,13 @@ const SCENES = [
         const dots = '.'.repeat(1 + Math.floor(t * 3) % 3);
         ctx.save(); ctx.translate(1640, 330);
         bubble(ctx, 0, 0, 280, 90, t, { seed: 352, tail: [0.1, 1] });
-        text(ctx, 'AI 계산 중' + dots, -118, 4, { size: 42, font: 'Jua', weight: 400, color: C.pencil, align: 'left' });
+        text(ctx, 'AI 계산 중' + dots, -118, 4, { size: 42, font: 'Single Day', weight: 400, color: C.pencil, align: 'left' });
         ctx.restore();
       }
       if (t > 8.4) {
         ctx.save(); ctx.translate(1640, 330);
         bubble(ctx, 0, 0, 170, 90, t, { seed: 353, tail: [0.1, 1] });
-        text(ctx, '?!', 0, 4, { size: 56, font: 'Jua', weight: 400, color: C.red });
+        text(ctx, '?!', 0, 4, { size: 56, font: 'Single Day', weight: 400, color: C.red });
         ctx.restore();
       }
       // 규연 번쩍

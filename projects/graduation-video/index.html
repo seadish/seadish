@@ -4,9 +4,8 @@
 <meta charset="utf-8">
 <title>일곱 개의 씨앗</title>
 <style>
-  @font-face { font-family: 'Gaegu'; src: url(fonts/Gaegu-Regular.ttf); font-weight: 400; }
-  @font-face { font-family: 'Gaegu'; src: url(fonts/Gaegu-Bold.ttf); font-weight: 700; }
-  @font-face { font-family: 'Jua'; src: url(fonts/Jua.ttf); font-weight: 400; }
+  @font-face { font-family: 'Gamja Flower'; src: url(fonts/GamjaFlower.ttf); font-weight: 400; }
+  @font-face { font-family: 'Single Day'; src: url(fonts/SingleDay.ttf); font-weight: 400; }
   @font-face { font-family: 'Nanum Pen Script'; src: url(fonts/NanumPenScript.ttf); font-weight: 400; }
   html, body { margin: 0; background: #222; }
   canvas { display: block; width: 100vw; max-width: 1920px; height: auto; margin: 0 auto; }
@@ -47,8 +46,8 @@ function seek(t) {
 }
 
 window.ready = (async () => {
-  await document.fonts.load('700 50px "Gaegu"');
-  await document.fonts.load('400 50px "Jua"');
+  await document.fonts.load('400 50px "Gamja Flower"');
+  await document.fonts.load('400 50px "Single Day"');
   await document.fonts.load('400 50px "Nanum Pen Script"');
   await loadImages();
   makePaper();
