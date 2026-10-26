@@ -70,9 +70,10 @@
 하준 드럼 · 근호 의사봉 · 주원 책·축구공·마이크 · 규연 책·AI 노트북 · 유건 운동장·야구장 · 태연 연극 가면·베이스 · 유민 도자기 물레·춤
 씨앗(프롤로그) → 새싹(각 장 구석) → 나무 7그루 → 숲(에필로그)
 
-## 완성 (v5, 2026-10-23)
+## 완성 (v6 더빙판, 2026-10-26)
 
-- 길이 2분 39초 · 1920×1080 · 30fps · 자체 작곡 배경음악 · 더빙 없음(자막으로 진행)
+- 길이 3분 40초 · 1920×1080 · 30fps · 자체 작곡 배경음악 · Gemini TTS 나레이션(Sulafat 목소리) · 음성에 맞춘 자막
+- 더빙 없는 v5(2분 39초)도 있음: `narration.js` 를 비우고(`const NARR = {};`) `audio/narration.wav` 를 지운 뒤 렌더링
 - 구성: 제목 「일곱 개의 씨앗」 → 학교 사진과 일곱 친구 → 1~7장(학생별 소품 연출 + 「OO아, 너의 꿈을 응원해!」 졸업 사진 페이지)
   → 에필로그(무대 → 큰 숲) → 엔딩 크레딧
 - 학생 사진은 Google Drive(학교 계정) `졸업영상_이미지` 폴더가 원본. 공개 저장소에는 올리지 않음
@@ -83,8 +84,9 @@
    - `images/cut/`, `images/faces/`, `images/props/` — 학생 프로필·얼굴·소품 스티커 (만든 방법은 아래 도구 참고)
    - `images/raw2/` — 졸업복·공연·단체·학교 원본 사진 → `tools/make_grad.sh` 로 `images/grad/` 생성
    - `images/ending/bg1.png`, `bg2.png` — 엔딩 크레딧 배경
-2. `node render.mjs --timeline` → `python3 tools/bgm.py` (배경음악 `audio/bgm.wav`)
-3. `node render.mjs --out 일곱개의씨앗.mp4`
+2. 나레이션: `python3 tools/tts.py --voice Sulafat` (Gemini API 키 필요, `audio/tts/`) → `python3 tools/narration.py` (쉼 다듬기·문장 시각 → `narration.js`)
+3. `node render.mjs --timeline` → `python3 tools/narration.py --assemble` (`audio/narration.wav`) → `python3 tools/bgm.py` (`audio/bgm.wav`)
+4. `node render.mjs --out 일곱개의씨앗.mp4` (나레이션이 나올 때 배경음악 자동 감소)
 
 ## 제작 파일
 
@@ -93,6 +95,7 @@
 - `tools/collage.py` — 사진 → 흰 테두리 스티커 (`--plain` 없이 쓰면 수채화 질감)
 - `tools/make_grad.sh` — 졸업 사진 페이지·학교·단체 사진 스티커 일괄 생성
 - `tools/bgm.py` — 장면 흐름에 맞춘 피아노·오르골 배경음악 합성
+- `tools/tts.py`, `tools/narration.py`, `narration.js` — Gemini TTS 나레이션 생성·편집·자막 동기화
 - `scenes.js` — 장면별 연출과 길이(`dur`). 나레이션 음성을 받으면 `dur` 만 맞추면 된다
 - `render.mjs` — `node render.mjs` → `out/graduation.mp4` (`audio/narration.wav` 가 있으면 함께 합침)
 - 학생 사진(`images/`), 음성(`audio/`), 렌더 결과(`out/`)는 공개 저장소에 올리지 않는다
