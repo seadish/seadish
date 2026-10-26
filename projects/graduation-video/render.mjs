@@ -55,10 +55,12 @@ if (args.timeline) {
   const bgm = path.join(ROOT, 'audio', 'bgm.wav'), narr = path.join(ROOT, 'audio', 'narration.wav');
   const hasBgm = fs.existsSync(bgm) && !args.noaudio, hasNarr = fs.existsSync(narr) && !args.noaudio;
   const audioIn = [], filters = [];
-  if (hasBgm) { audioIn.push('-ss', String(from), '-i', bgm); filters.push(`[${audioIn.filter(a => a === '-i').length}:a]volume=${hasNarr ? 0.35 : 0.9}[m]`); }
-  if (hasNarr) { audioIn.push('-ss', String(from), '-i', narr); filters.push(`[${audioIn.filter(a => a === '-i').length}:a]volume=1.0[n]`); }
-  const audioArgs = !audioIn.length ? [] : [...audioIn, '-filter_complex',
-    filters.join(';') + ';' + (hasBgm && hasNarr ? '[m][n]amix=inputs=2:duration=first:normalize=0[a]' : hasBgm ? '[m]anull[a]' : '[n]anull[a]'),
+  if (hasBgm) { audioIn.push('-ss', String(from), '-i', bgm); filters.push(`[${audioIn.filter(a => a === '-i').length}:a]volume=${hasNarr ? 0.75 : 0.9}[m]`); }
+  if (hasNarr) { audioIn.push('-ss', String(from), '-i', narr); filters.push(`[${audioIn.filter(a => a === '-i').length}:a]volume=1.0,asplit=2[n][nk]`); }
+  // 나레이션이 나오는 동안 배경음악을 자동으로 낮춘다 (사이드체인 덕킹)
+  const mix = hasBgm && hasNarr ? '[m][nk]sidechaincompress=threshold=0.02:ratio=8:attack=60:release=700[md];[md][n]amix=inputs=2:duration=first:normalize=0[a]'
+    : hasBgm ? '[m]anull[a]' : '[nk]anullsink;[n]anull[a]';
+  const audioArgs = !audioIn.length ? [] : [...audioIn, '-filter_complex', filters.join(';') + ';' + mix,
     '-map', '0:v', '-map', '[a]', '-c:a', 'aac', '-b:a', '192k', '-t', String(to - from)];
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
     ...audioArgs,

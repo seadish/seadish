@@ -299,7 +299,12 @@ function wrapLines(ctx, str, maxW) {
   return lines;
 }
 function drawSubtitle(ctx, narr, t, dur, o = {}) {
-  const cur = subtitleAt(narr, t, dur, o.lead, o.tail);
+  let cur;
+  if (o.subs) { // 실제 음성의 문장 시각 (다음 문장 전까지 유지)
+    const ss = splitSentences(narr);
+    const i = o.subs.findIndex(([a, b], j) => t >= a - 0.15 && t < (o.subs[j + 1] ? o.subs[j + 1][0] - 0.15 : b + 0.6));
+    cur = i < 0 ? null : { s: ss[i], t0: o.subs[i][0] - 0.15 };
+  } else cur = subtitleAt(narr, t, dur, o.lead, o.tail);
   if (!cur || t < 0) return;
   const { s } = cur;
   const fadeIn = clamp((t - cur.t0) / 0.25);

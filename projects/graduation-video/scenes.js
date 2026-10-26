@@ -570,6 +570,19 @@ const SCENES = [
 let epiBuf = null;
 
 
+// ==================== 나레이션(Gemini TTS) 맞추기 ====================
+// narration.js 의 실제 음성 길이에 맞춰 장면을 늘리고(애니메이션은 같은 비율로 천천히), 자막은 문장 시각에 맞춘다.
+if (typeof NARR !== 'undefined') SCENES.forEach(s => {
+  const n = NARR[s.key]; if (!n) return;
+  const need = n.start + n.len + (s.key === 'epilogue' ? 3.2 : 0.9);
+  if (need > s.dur) {
+    const k = s.dur / need, base = s.dur, orig = s.draw.bind(s);
+    s.draw = (ctx, t) => orig(ctx, t * k, base);
+    s.dur = need;
+  }
+  s.subs = n.sents.map(([a, b]) => [a + n.start, b + n.start]);
+});
+
 // ==================== 졸업 사진 페이지 ====================
 // 각 장의 나레이션이 끝나면 페이지가 찢어지며 졸업복 사진 페이지로 넘어간다.
 const GRAD_DUR = 4.6;

@@ -17,8 +17,9 @@
 <body>
 <canvas id="c" width="1920" height="1080"></canvas>
 <div id="bar"><button id="play">▶︎ 재생</button><input id="seek" type="range" min="0" step="0.01" value="0"><span id="time">0.0</span></div>
-<audio id="narr" src="audio/narration.wav" preload="auto"></audio>
+<audio id="narr" src="audio/mix.wav" preload="auto"></audio>
 <script src="engine.js"></script>
+<script src="narration.js"></script>
 <script src="scenes.js"></script>
 <script>
 const canvas = document.getElementById('c');
@@ -29,7 +30,7 @@ const bctx = buf.getContext('2d');
 function drawScene(c, i, local) {
   const s = SCENES[i];
   c.save(); s.draw(c, local, s.dur); c.restore();
-  c.save(); if (s.narr) drawSubtitle(c, s.narr, local, s.narrDur ?? s.dur, { lead: s.subLead ?? 1.1, tail: s.subTail ?? 0.6 }); c.restore();
+  c.save(); if (s.narr) drawSubtitle(c, s.narr, local, s.narrDur ?? s.dur, { lead: s.subLead ?? 1.1, tail: s.subTail ?? 0.6, subs: s.subs }); c.restore();
 }
 
 // 시간 t 의 프레임을 그린다
