@@ -1,0 +1,105 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{uid} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && validUser(request.resource.data);
+
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && validUser(request.resource.data)
+        && roleUnchanged(request.resource, resource);
+
+      allow delete: if request.auth != null
+        && isTeacherOfStudent(request.auth.uid, uid);
+
+      match /daily/{dateKey} {
+        allow read: if request.auth != null && (
+          request.auth.uid == uid
+          || isTeacherOfStudent(request.auth.uid, uid)
+        );
+        allow create, update: if request.auth != null
+          && request.auth.uid == uid
+          && validDaily(request.resource.data);
+        allow delete: if false;
+      }
+    }
+
+    match /usernames/{username} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.role in ['student', 'teacher']
+        && username.matches('^[a-z0-9_-]{4,20}$');
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /classrooms/{classCode} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.teacherUid == request.auth.uid
+        && validClassroom(request.resource.data);
+      allow update: if request.auth != null
+        && resource.data.teacherUid == request.auth.uid
+        && request.resource.data.teacherUid == request.auth.uid
+        && validClassroom(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function validUser(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 20
+        && d.classCode is string && d.classCode.size() > 0 && d.classCode.size() <= 40
+        && d.coins is number && d.coins >= 0
+        && d.level is number && d.level >= 1 && d.level <= 999
+        && (!('role' in d) || d.role in ['student', 'teacher'])
+        && (!('totalCorrect' in d) || (d.totalCorrect is number && d.totalCorrect >= 0))
+        && (!('totalWrong' in d) || (d.totalWrong is number && d.totalWrong >= 0))
+        && (!('grade' in d) || (d.grade is number && d.grade >= 1 && d.grade <= 6))
+        && (!('classNumber' in d) || (d.classNumber is number && d.classNumber >= 1 && d.classNumber <= 99))
+        && (!('username' in d) || (d.username is string && d.username.size() >= 4 && d.username.size() <= 20))
+        && (!('displayPassword' in d) || (d.displayPassword is string && d.displayPassword.size() <= 40))
+        && (!('exp' in d) || (d.exp is number && d.exp >= 0));
+    }
+
+    function roleUnchanged(req, res) {
+      return !('role' in res.data) || !('role' in req.data) || req.data.role == res.data.role;
+    }
+
+    function validDaily(d) {
+      return d.date is string && d.date.size() <= 12
+        && (!('coins' in d) || (d.coins is number && d.coins >= 0))
+        && (!('correct' in d) || (d.correct is number && d.correct >= 0))
+        && (!('wrong' in d) || (d.wrong is number && d.wrong >= 0));
+    }
+
+    function validClassroom(d) {
+      return d.classCode is string && d.classCode.size() > 0 && d.classCode.size() <= 40
+        && d.schoolCode is string && d.schoolCode.size() > 0 && d.schoolCode.size() <= 20
+        && d.schoolName is string && d.schoolName.size() > 0 && d.schoolName.size() <= 50
+        && d.grade is number && d.grade >= 1 && d.grade <= 6
+        && d.classNumber is number && d.classNumber >= 1 && d.classNumber <= 99
+        && d.teacherUid is string
+        && d.teacherName is string && d.teacherName.size() > 0;
+    }
+
+    function isTeacherOfStudent(teacherUid, studentUid) {
+      let teacher = get(/databases/$(database)/documents/users/$(teacherUid)).data;
+      let student = get(/databases/$(database)/documents/users/$(studentUid)).data;
+      return teacher.role == 'teacher'
+        && student.role == 'student'
+        && teacher.classCode == student.classCode;
+    }
+  }
+}

@@ -1,0 +1,35 @@
+// client/src/firebase/config.ts
+import { initializeApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+};
+
+let _app: FirebaseApp | null = null;
+let _auth: Auth | null = null;
+let _db: Firestore | null = null;
+
+export const isFirebaseConfigured: boolean = !!firebaseConfig.apiKey;
+
+if (isFirebaseConfigured) {
+  try {
+    _app = initializeApp(firebaseConfig);
+    _auth = getAuth(_app);
+    _db = getFirestore(_app);
+  } catch (e) {
+    console.error('[firebase] init failed — 오프라인 모드', e);
+  }
+}
+
+const authStub = { currentUser: null } as unknown as Auth;
+export const app: FirebaseApp | null = _app;
+export const auth: Auth = _auth ?? authStub;
+export const db: Firestore = _db as Firestore;
