@@ -64,6 +64,7 @@ export class StudentScene extends Phaser.Scene {
         snapshot: () => this.s,
         debug: () => ({ key: this.overlayKey, kicked: this.kicked, n: this.overlay.childElementCount, mounted: this.overlay.isConnected, scenes: this.game.scene.getScenes(false).length }),
         forcePos: (x: number, y: number) => { this.me = { x, y }; this.placed = true; this.sendPos(true); },
+        spriteOf: (uid: string) => { const sp = this.sprites.get(uid); return sp ? { x: sp.x, y: sp.y } : null; },
         screenOf: (x: number, y: number) => {
           const cam = this.cameras.main;
           return { x: (x - cam.worldView.x) * cam.zoom, y: (y - cam.worldView.y) * cam.zoom };

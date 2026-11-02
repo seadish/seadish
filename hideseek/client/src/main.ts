@@ -8,6 +8,7 @@ import { HostScene } from './scenes/HostScene';
 import { h, mount } from './ui/dom';
 
 const TEACHER_CODE = (import.meta.env.VITE_TEACHER_CODE ?? '').trim();
+const LOW_FPS = import.meta.env.VITE_USE_EMULATOR === '1' && new URLSearchParams(location.search).has('lowfps');
 const STUDENT_ROOM_KEY = 'hideseek.studentRoom';
 const c = client();
 
@@ -21,6 +22,8 @@ function start(key: 'student' | 'host', data: GameData): void {
     parent: 'game',
     backgroundColor: '#d8cdb8',
     scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' },
+    // 에뮬레이터 E2E에서는 한 컴퓨터에 브라우저 8개를 띄우므로 프레임을 낮춘다(?lowfps).
+    ...(LOW_FPS ? { fps: { target: 8, forceSetTimeOut: true } } : {}),
     scene: [],
   });
   game.scene.add(key, key === 'student' ? StudentScene : HostScene, true, data);

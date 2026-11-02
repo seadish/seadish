@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const URL = process.env.E2E_URL ?? 'http://127.0.0.1:5276/';
+const URL = process.env.E2E_URL ?? 'http://127.0.0.1:5276/?lowfps';
 const DB = 'http://127.0.0.1:9000';
 const OWNER = { Authorization: 'Bearer owner' };
 const NAMES = ['가람', '나래', '다온', '라희', '마루', '바다', '사랑'];
@@ -28,7 +28,7 @@ async function until(fn, what, timeout = 10_000) {
 
 const browser = await chromium.launch();
 async function open(label) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const ctx = await browser.newContext({ viewport: { width: 960, height: 540 } });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
   page.on('console', (m) => { if (process.env.E2E_DEBUG && !m.text().includes('GL Driver')) console.log(label, m.type(), m.text().slice(0, 200)); });
@@ -100,8 +100,10 @@ try {
   const targetUid = uids[1];
   await target.evaluate(() => window.__hs.forcePos(1000, 490));
   await seeker.evaluate(() => window.__hs.forcePos(940, 490));
-  await until(async () => { const s = await snap(seeker); return s.pos[targetUid]?.x === 1000; }, '술래 화면에 위치 반영');
-  await seeker.waitForTimeout(400);
+  await until(async () => {
+    const sp = await seeker.evaluate((u) => window.__hs.spriteOf(u), targetUid);
+    return sp && Math.abs(sp.x - 1000) < 2 && Math.abs(sp.y - 490) < 2;
+  }, '술래 화면에서 숨은 학생 그림이 제자리에 도착');
   let pt = await seeker.evaluate(() => window.__hs.screenOf(1000, 490));
   await seeker.mouse.click(pt.x, pt.y);
   await until(async () => (await snap(host)).players[targetUid].state.caught, '잡힘 처리');
@@ -112,7 +114,7 @@ try {
 
   // 7. 진짜 사물을 클릭 → 2초 정지
   await seeker.evaluate(() => window.__hs.forcePos(1320, 515)); // 사물함(1320,456) 아래
-  await seeker.waitForTimeout(300);
+  await seeker.waitForTimeout(800); // 카메라가 새 위치로 옮겨질 시간
   pt = await seeker.evaluate(() => window.__hs.screenOf(1320, 456));
   await seeker.mouse.click(pt.x, pt.y);
   await until(async () => (await snap(host)).players[uids[0]].state.frozenUntil > 0, '정지 처리');
