@@ -13,8 +13,8 @@ export class PlayerSprite {
   y = 0;
   private placed = false;
 
-  constructor(private scene: Phaser.Scene, name: string, private highlight = false) {
-    this.label = makeLabel(scene, name, highlight ? '#3a6ff7' : '#2b2a33');
+  constructor(private scene: Phaser.Scene, name: string, private highlight = false, labelScale = 1) {
+    this.label = makeLabel(scene, name, highlight ? '#3a6ff7' : '#2b2a33').setScale(labelScale);
   }
 
   setLook(look: Look): void {

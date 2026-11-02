@@ -68,7 +68,7 @@ export class HostScene extends Phaser.Scene {
     for (const [uid, sp] of this.sprites) if (!s.players[uid]) { sp.destroy(); this.sprites.delete(uid); }
     for (const [uid, p] of Object.entries(s.players)) {
       let sp = this.sprites.get(uid);
-      if (!sp) { sp = new PlayerSprite(this, p.profile.name); this.sprites.set(uid, sp); }
+      if (!sp) { sp = new PlayerSprite(this, p.profile.name, false, 1.8); this.sprites.set(uid, sp); } // 축소된 맵에서도 읽히게
       const pos = s.pos[uid];
       if (!pos || p.state.team === 'wait' || s.meta.phase === 'lobby') { sp.draw({ visible: false, showName: false, wobble: 0 }); continue; }
       const disguised = p.state.team === 'hide';
