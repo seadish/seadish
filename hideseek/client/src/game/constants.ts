@@ -1,0 +1,12 @@
+export const PREP_MS = 30_000;
+export const SEEK_MS = 240_000;
+export const RESULT_MS = 15_000;
+export const TAG_RANGE = 120;
+export const FREEZE_MS = 2_000;
+export const VISION_RADIUS = 180;
+export const SPEED = 140;
+export const MAX_STUDENTS = 7;
+export const POINT_INTERVAL_MS = 30_000;
+export const SURVIVE_BONUS = 5;
+export const CATCH_POINTS = 3;
+export const NAME_MAX = 8;
