@@ -30,6 +30,18 @@ describe('room api', () => {
     expect(meta.hostUid).toBe(t.uid);
   });
 
+  it('first read right after a fresh sign-in is not denied', async () => {
+    const t = await user();
+    const code = await createRoom(t.c.db, t.uid);
+    // 연결이 로그인보다 먼저 열리면 첫 읽기가 거부되는 경쟁 상태를 잡기 위해 여러 번 반복
+    const results: string[] = [];
+    for (let i = 0; i < 40; i++) {
+      const s = await user();
+      results.push(await joinRoom(s.c.db, code, s.uid, `즉시${i}`).catch((e) => String(e)));
+    }
+    expect(results.filter((r) => r !== 'ok' && r !== 'full')).toEqual([]);
+  });
+
   it('joinRoom: unknown code → notfound', async () => {
     const s = await user();
     expect(await joinRoom(s.c.db, '1111', s.uid, '철수')).toBe('notfound');

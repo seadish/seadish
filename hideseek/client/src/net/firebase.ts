@@ -24,7 +24,7 @@ export interface Client {
   app: FirebaseApp;
   db: Database;
   auth: Auth;
-  /** 익명 로그인. 같은 브라우저에서는 같은 uid가 유지된다. */
+  /** 익명 로그인. 같은 브라우저에서는 같은 uid가 유지된다. db를 쓰기 전에 반드시 먼저 호출한다. */
   ensureUid(): Promise<string>;
   /** Firebase 서버 시간 기준 현재 ms */
   serverNow(): number;
@@ -39,13 +39,18 @@ export function createClient(name?: string): Client {
     connectDatabaseEmulator(db, '127.0.0.1', 9000);
   }
   let offset = 0;
-  onValue(ref(db, '.info/serverTimeOffset'), (s) => { offset = Number(s.val()) || 0; });
+  let watchingOffset = false;
   return {
     app, db, auth,
     async ensureUid() {
       await auth.authStateReady();
-      if (auth.currentUser) return auth.currentUser.uid;
-      return (await signInAnonymously(auth)).user.uid;
+      const uid = auth.currentUser?.uid ?? (await signInAnonymously(auth)).user.uid;
+      // DB 연결은 로그인 뒤에 처음 열어야 첫 요청부터 인증된 상태로 나간다.
+      if (!watchingOffset) {
+        watchingOffset = true;
+        onValue(ref(db, '.info/serverTimeOffset'), (s) => { offset = Number(s.val()) || 0; });
+      }
+      return uid;
     },
     serverNow: () => Date.now() + offset,
   };
