@@ -1,0 +1,26 @@
+{
+  "name": "hideseek",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5275",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 5275",
+    "test": "vitest run",
+    "test:rules": "bash ../scripts/emulators.sh \"cd client && npx vitest run -c vitest.rules.config.ts\"",
+    "e2e": "bash e2e/run.sh",
+    "dev:emu": "bash ../scripts/emulators.sh \"cd client && npx vite --mode emulator --port 5275 --strictPort\""
+  },
+  "dependencies": {
+    "firebase": "^12.12.1",
+    "phaser": "^3.55.2"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "firebase-tools": "^15.0.0",
+    "typescript": "^6.0.3",
+    "vite": "^4.0.0",
+    "vitest": "^0.34.6"
+  }
+}

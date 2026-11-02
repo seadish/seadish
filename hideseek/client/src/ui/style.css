@@ -1,0 +1,59 @@
+:root {
+  --bg: #f6efe2; --ink: #2b2a33; --muted: #6b6878; --card: #fffaf1; --line: #e3d8c4;
+  --seek: #e2583e; --hide: #2f8f6b; --accent: #3a6ff7; --warn: #c98a12;
+  font-family: "Noto Sans KR", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden; }
+#game { position: fixed; inset: 0; }
+#ui { position: fixed; inset: 0; pointer-events: none; }
+#ui .panel, #ui button, #ui input { pointer-events: auto; }
+button { font: inherit; font-weight: 700; border: 0; border-radius: 12px; padding: 10px 16px; cursor: pointer;
+  background: var(--accent); color: #fff; }
+button:disabled { opacity: .45; cursor: default; }
+button.ghost { background: transparent; color: var(--muted); border: 2px solid var(--line); }
+button.danger { background: var(--seek); }
+input { font: inherit; font-size: 20px; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; width: 100%; background: #fff; }
+.center { position: absolute; inset: 0; display: grid; place-items: center; }
+.card { background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 24px; box-shadow: 0 8px 0 var(--line); }
+.entry { display: grid; gap: 20px; width: min(760px, 92vw); }
+.entry h1 { margin: 0; font-size: 36px; text-align: center; }
+.entry .sub { text-align: center; color: var(--muted); margin-top: -12px; }
+.entry .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.entry .card { display: grid; gap: 12px; align-content: start; }
+.entry h2 { margin: 0; font-size: 22px; }
+.error { color: var(--seek); font-weight: 700; min-height: 1.4em; text-align: center; }
+.lobby { width: min(560px, 92vw); text-align: center; display: grid; gap: 12px; }
+.lobby .code { font-size: 48px; font-weight: 800; letter-spacing: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; list-style: none; padding: 0; margin: 0; }
+.chips li { background: #fff; border: 2px solid var(--line); border-radius: 999px; padding: 6px 14px; font-weight: 700; }
+.chips li.me { border-color: var(--accent); }
+.chips li.off { opacity: .45; }
+.hud { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center;
+  background: var(--card); border: 2px solid var(--line); border-radius: 999px; padding: 6px 16px; font-weight: 700; white-space: nowrap; }
+.hud .time { font-size: 22px; min-width: 64px; text-align: center; }
+.tag { border-radius: 999px; padding: 2px 10px; color: #fff; }
+.tag.seek { background: var(--seek); } .tag.hide { background: var(--hide); } .tag.wait { background: var(--muted); }
+.toast { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff;
+  border-radius: 12px; padding: 8px 16px; font-weight: 700; }
+.cover { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(30, 28, 40, .86); color: #fff;
+  font-size: 32px; font-weight: 800; text-align: center; }
+.cover small { display: block; font-size: 18px; font-weight: 600; opacity: .8; margin-top: 8px; }
+.props { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap;
+  justify-content: center; width: min(980px, 96vw); }
+.props button { background: #fff; color: var(--ink); border: 2px solid var(--line); padding: 6px 10px; }
+.props button.on { border-color: var(--hide); background: #e4f4ec; }
+.result { width: min(560px, 92vw); display: grid; gap: 10px; }
+.result h2 { margin: 0; text-align: center; font-size: 28px; }
+table { width: 100%; border-collapse: collapse; }
+td, th { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+.side { position: absolute; top: 0; right: 0; bottom: 0; width: 340px; background: var(--card); border-left: 2px solid var(--line);
+  padding: 16px; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
+.side .code { font-size: 44px; font-weight: 800; letter-spacing: 6px; text-align: center; }
+.side .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.side .status { text-align: center; font-weight: 700; }
+.side td button { padding: 2px 8px; font-size: 13px; background: transparent; color: var(--seek); border: 1px solid var(--seek); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--hide); margin-right: 6px; }
+.dot.off { background: #bbb; }
+.podium { display: flex; gap: 16px; align-items: end; justify-content: center; }
+.podium div { background: var(--card); border: 2px solid var(--line); border-radius: 12px; padding: 12px; text-align: center; min-width: 120px; font-weight: 800; }
