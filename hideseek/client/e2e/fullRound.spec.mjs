@@ -31,7 +31,7 @@ async function open(label) {
   const ctx = await browser.newContext({ viewport: { width: 960, height: 540 } });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
-  page.on('console', (m) => { if (process.env.E2E_DEBUG && !m.text().includes('GL Driver')) console.log(label, m.type(), m.text().slice(0, 200)); });
+  page.on('console', (m) => { if (process.env.E2E_DEBUG && (process.env.E2E_DEBUG === '1' || label === process.env.E2E_DEBUG) && !/GL Driver|Phaser v/.test(m.text())) console.log(label, m.type(), m.text().slice(0, 200)); });
   page.on('dialog', (d) => d.accept());
   await page.goto(URL);
   return page;
@@ -132,7 +132,10 @@ try {
 
   // 9. 교사 새로고침 → 자동 일시정지 → 같은 방 복귀 → 재개
   await host.reload();
-  await host.getByTestId('host-room-code').waitFor();
+  await host.getByTestId('host-room-code').waitFor().catch(async (e) => {
+    console.error('교사 복귀 실패 화면:', (await host.locator('#ui').innerHTML()).slice(0, 400), errors);
+    throw e;
+  });
   assert.equal((await host.getByTestId('host-room-code').textContent()).trim(), code);
   await until(async () => (await snap(host)).meta.paused === true, '교사 이탈 시 자동 일시정지');
   await host.getByTestId('pause-btn').click();
