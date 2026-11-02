@@ -36,7 +36,8 @@ export async function findHostRoom(db: Database, hostUid: string): Promise<strin
   try { code = storage()?.getItem(HOST_ROOM_KEY) ?? null; } catch { /* 없음 */ }
   if (!code) return null;
   const meta = (await get(ref(db, path(code, 'meta')))).val();
-  return meta?.hostUid === hostUid ? code : null;
+  // 최종 순위까지 끝난 방은 다시 열지 않고 새 방을 만든다.
+  return meta?.hostUid === hostUid && meta.phase !== 'final' ? code : null;
 }
 
 export type JoinResult = 'ok' | 'notfound' | 'full' | 'kicked' | 'badname';
