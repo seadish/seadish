@@ -18,11 +18,12 @@ function remember(code: string | null): void {
 
 function start(key: 'student' | 'host', data: GameData): void {
   const game = new Phaser.Game({
-    type: Phaser.AUTO,
+    // E2E(?lowfps)에서는 여러 브라우저가 소프트웨어 GPU 하나를 나눠 쓰므로 Canvas로 그린다.
+    type: LOW_FPS ? Phaser.CANVAS : Phaser.AUTO,
     parent: 'game',
     backgroundColor: '#d8cdb8',
     scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' },
-    // 에뮬레이터 E2E에서는 한 컴퓨터에 브라우저 8개를 띄우므로 프레임을 낮춘다(?lowfps).
+    // 에뮬레이터 E2E에서는 한 컴퓨터에 브라우저 8개를 띄우므로 프레임을 낮춘다.
     ...(LOW_FPS ? { fps: { target: 8, forceSetTimeOut: true } } : {}),
     scene: [],
   });
