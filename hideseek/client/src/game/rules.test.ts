@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  validName, pickSeeker, assignTeams, resolveAction, seekElapsed,
+  validName, pickSeeker, assignTeams, resolveAction, seekElapsed, remainingMs,
   catchPoints, settleSurvivors, allCaught, winner, nextPhase,
 } from './rules';
 import type { Meta, Player, Pos, Team, Action } from './types';
@@ -15,7 +15,7 @@ function mkPlayer(team: Team, opts: Partial<Player['state']> = {}, online = true
 function mkMeta(opts: Partial<Meta> = {}): Meta {
   return {
     hostUid: 'host', phase: 'seek', round: 1, phaseEndsAt: 1_000_000, paused: false,
-    remainingMs: 0, seekerOrder: ['s', 'h'], seekerUid: 's', ...opts,
+    pausedAt: 0, seekerOrder: ['s', 'h'], seekerUid: 's', ...opts,
   };
 }
 const NOW = 500_000;
@@ -38,19 +38,26 @@ describe('validName', () => {
   it('accepts 8 chars', () => expect(validName('가나다라마바사아')).toBe('가나다라마바사아'));
 });
 
-describe('pickSeeker', () => {
+describe('pickSeeker (next online student after the previous seeker)', () => {
   const all = new Set(['a', 'b', 'c']);
-  it('round 1 → first', () => expect(pickSeeker(['a', 'b', 'c'], 1, all)).toBe('a'));
-  it('round 2 → second', () => expect(pickSeeker(['a', 'b', 'c'], 2, all)).toBe('b'));
-  it('round 4 wraps', () => expect(pickSeeker(['a', 'b', 'c'], 4, all)).toBe('a'));
-  it('skips offline', () => expect(pickSeeker(['a', 'b', 'c'], 2, new Set(['a', 'c']))).toBe('c'));
-  it('null if nobody online', () => expect(pickSeeker(['a', 'b'], 1, new Set())).toBeNull());
-  it('null on empty order', () => expect(pickSeeker([], 1, all)).toBeNull());
+  it('first round → first online', () => expect(pickSeeker(['a', 'b', 'c'], null, all)).toBe('a'));
+  it('after a → b', () => expect(pickSeeker(['a', 'b', 'c'], 'a', all)).toBe('b'));
+  it('after c wraps to a', () => expect(pickSeeker(['a', 'b', 'c'], 'c', all)).toBe('a'));
+  it('skips offline', () => expect(pickSeeker(['a', 'b', 'c'], 'a', new Set(['a', 'c']))).toBe('c'));
+  it('does not repeat a seeker when someone was offline', () => {
+    const order = ['a', 'b', 'c', 'd'];
+    const r2 = pickSeeker(order, 'a', new Set(['a', 'c', 'd']));
+    expect(r2).toBe('c');
+    expect(pickSeeker(order, r2, new Set(order))).toBe('d');
+  });
+  it('unknown previous (kicked) → first online', () => expect(pickSeeker(['a', 'b'], 'zz', new Set(['b']))).toBe('b'));
+  it('null if nobody online', () => expect(pickSeeker(['a', 'b'], null, new Set())).toBeNull());
+  it('null on empty order', () => expect(pickSeeker([], null, all)).toBeNull());
 });
 
 describe('assignTeams', () => {
-  it('seeker seek, rest hide', () =>
-    expect(assignTeams(['a', 'b', 'c'], 'b')).toEqual({ a: 'hide', b: 'seek', c: 'hide' }));
+  it('seeker seek, online rest hide, offline wait', () =>
+    expect(assignTeams(['a', 'b', 'c'], 'b', new Set(['a', 'b']))).toEqual({ a: 'hide', b: 'seek', c: 'wait' }));
 });
 
 describe('resolveAction', () => {
@@ -90,13 +97,18 @@ describe('points', () => {
   });
 });
 
-describe('seekElapsed', () => {
-  it('paused uses remainingMs', () =>
-    expect(seekElapsed(mkMeta({ paused: true, remainingMs: 100_000 }), NOW)).toBe(140_000));
+describe('seekElapsed / remainingMs', () => {
+  it('paused: measured at the pause moment', () =>
+    expect(seekElapsed(mkMeta({ paused: true, pausedAt: NOW - 50_000, phaseEndsAt: NOW + 50_000 }), NOW)).toBe(140_000));
   it('running uses phaseEndsAt', () =>
     expect(seekElapsed(mkMeta({ phaseEndsAt: NOW + 200_000 }), NOW)).toBe(40_000));
   it('clamps after end', () =>
     expect(seekElapsed(mkMeta({ phaseEndsAt: NOW - 5 }), NOW)).toBe(240_000));
+  it('remainingMs while running', () => expect(remainingMs(mkMeta({ phaseEndsAt: NOW + 1234 }), NOW)).toBe(1234));
+  it('remainingMs while paused ignores time since the pause', () =>
+    expect(remainingMs(mkMeta({ paused: true, pausedAt: NOW - 99_000, phaseEndsAt: NOW - 99_000 + 7_000 }), NOW)).toBe(7_000));
+  it('remainingMs never exceeds the phase length (stale pause from a flaky teacher connection)', () =>
+    expect(remainingMs(mkMeta({ phase: 'seek', paused: true, pausedAt: NOW - 3_000, phaseEndsAt: NOW + 240_000 }), NOW)).toBe(240_000));
 });
 
 describe('allCaught / winner', () => {

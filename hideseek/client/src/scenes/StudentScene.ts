@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import type { Client } from '../net/firebase';
-import { pushAction, setPos, setProp, subscribeRoom } from '../net/room';
+import { leaveToEntry, pushAction, setPos, setProp, subscribeRoom } from '../net/room';
 import type { PlayerState, RoomSnapshot, Team } from '../game/types';
 import { SPEED, TAG_RANGE, VISION_RADIUS } from '../game/constants';
 import { DECOR, HIDER_SPAWNS, MAP_H, MAP_W, PROP_KINDS, SEEKER_SPAWN, blocked, propKind } from '../game/map';
-import { canAct, isVisible, remainingSec, seesWobble } from '../game/view';
+import { canAct, hidesWorld, isVisible, remainingSec, seesWobble } from '../game/view';
 import { drawDecor, drawFloor, makeFog } from './drawMap';
 import { PlayerSprite, type Look } from './playerSprites';
 import { h, mount } from '../ui/dom';
@@ -168,6 +168,7 @@ export class StudentScene extends Phaser.Scene {
     const viewer = { ...this.me, moving: false };
     const reveal = s.meta.phase === 'result' || s.meta.phase === 'final';
     const fogOn = myTeam === 'seek' && s.meta.phase === 'seek';
+    const blind = hidesWorld(s.meta, myTeam);
     const wobbleViewer = seesWobble(myTeam);
 
     for (const d of DECOR) this.decor.get(d.id)!.setVisible(!fogOn || isVisible('seek', viewer, d));
@@ -185,7 +186,7 @@ export class StudentScene extends Phaser.Scene {
       const moving = !isMe && 'moving' in pos && (pos as { moving: boolean }).moving;
       const wobble = disguised && moving && wobbleViewer ? Math.sin((time / 1000) * Math.PI * 2 * 8) * 2 : 0;
       sp.draw({
-        visible: isMe || !fogOn || isVisible('seek', viewer, sp),
+        visible: isMe || (!blind && (!fogOn || isVisible('seek', viewer, sp))),
         showName: isMe || reveal || !(myTeam === 'seek' && disguised),
         wobble,
       });
@@ -263,7 +264,7 @@ export class StudentScene extends Phaser.Scene {
         h('span', {}, `남은 숨은 사람 ${left}`), h('span', { testid: 'my-score' }, `내 점수 ${st.score}`),
       ));
     }
-    if (phase === 'prep' && st.team === 'seek' && !paused) {
+    if (hidesWorld(s.meta, st.team)) {
       this.coverCountEl = h('span', {}, String(remainingSec(s.meta, now)));
       parts.push(h('div', { class: 'cover', style: 'background: #1e1c28', testid: 'seeker-cover' },
         h('div', {}, '🙈 눈 감고 세는 중… ', this.coverCountEl, h('small', {}, '숨는 친구들이 물건으로 변신하고 있어요'))));
@@ -283,7 +284,8 @@ export class StudentScene extends Phaser.Scene {
     }
     if (phase === 'result') parts.push(h('div', { class: 'center' }, resultCard(s, this.roundStartScores)));
     if (!s.hostOnline && phase !== 'final') {
-      parts.push(h('div', { class: 'cover', testid: 'host-wait' }, h('div', {}, '선생님 기다리는 중…', h('small', {}, '선생님 화면이 다시 열리면 이어서 해요'))));
+      parts.push(h('div', { class: 'cover', testid: 'host-wait' }, h('div', {}, '선생님 기다리는 중…', h('small', {}, '선생님 화면이 다시 열리면 이어서 해요'),
+        h('button', { class: 'ghost', testid: 'leave-btn', style: 'margin-top: 16px; color: #fff', onclick: leaveToEntry }, '다른 방으로 가기'))));
     } else if (paused) {
       parts.push(h('div', { class: 'cover', testid: 'paused-cover' }, '선생님이 잠깐 멈췄어요 ✋'));
     }

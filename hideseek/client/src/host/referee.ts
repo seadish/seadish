@@ -3,7 +3,7 @@ import type { Database } from 'firebase/database';
 import type { Action, Meta, PlayerState, RoomSnapshot } from '../game/types';
 import { PREP_MS, RESULT_MS, CATCH_POINTS } from '../game/constants';
 import {
-  allCaught, assignTeams, catchPoints, nextPhase, pickSeeker, resolveAction, seekElapsed, settleSurvivors,
+  allCaught, assignTeams, catchPoints, nextPhase, pickSeeker, remainingMs, resolveAction, seekElapsed, settleSurvivors,
 } from '../game/rules';
 import { decorPos } from '../game/map';
 import * as room from '../net/room';
@@ -12,7 +12,8 @@ export interface RoomPort {
   updateMeta(p: Partial<Meta>): void;
   updateStates(p: Record<string, Partial<PlayerState>>): void;
   deleteAction(id: string): void;
-  armHostDisconnect(remainingMs: number | null): void;
+  /** true면 교사 연결이 끊길 때 서버가 일시정지시키도록 예약, false면 예약 해제 */
+  armHostDisconnect(on: boolean): void;
   kick(uid: string): void;
 }
 
@@ -22,17 +23,18 @@ export function roomPort(db: Database, code: string): RoomPort {
     updateMeta: (p) => { room.updateMeta(db, code, p).catch(warn); },
     updateStates: (p) => { room.updateStates(db, code, p).catch(warn); },
     deleteAction: (id) => room.deleteAction(db, code, id),
-    armHostDisconnect: (ms) => { room.armHostDisconnect(db, code, ms).catch(warn); },
+    armHostDisconnect: (on) => { room.armHostDisconnect(db, code, on).catch(warn); },
     kick: (uid) => { room.kick(db, code, uid).catch(warn); },
   };
 }
 
-const ARM_EVERY_MS = 1_000;
+// 재접속하면 서버의 끊김 예약이 사라지므로 진행 중에는 주기적으로 다시 건다.
+const ARM_EVERY_MS = 5_000;
 
 export class Referee {
   private s: RoomSnapshot | null = null;
   private lastArmAt = -Infinity;
-  private armedRunning = false;
+  private armed = false;
 
   constructor(private port: RoomPort, private now: () => number) {}
 
@@ -71,13 +73,13 @@ export class Referee {
     const now = this.now();
     const { meta } = s;
     const running = (meta.phase === 'prep' || meta.phase === 'seek') && !meta.paused;
-    if (running && now - this.lastArmAt >= ARM_EVERY_MS) {
+    if (running && (!this.armed || now - this.lastArmAt >= ARM_EVERY_MS)) {
       this.lastArmAt = now;
-      this.armedRunning = true;
-      this.port.armHostDisconnect(Math.max(0, meta.phaseEndsAt - now));
-    } else if (!running && this.armedRunning && !meta.paused) {
-      this.armedRunning = false;
-      this.port.armHostDisconnect(null);
+      this.armed = true;
+      this.port.armHostDisconnect(true);
+    } else if (!running && this.armed) {
+      this.armed = false;
+      this.port.armHostDisconnect(false);
     }
 
     const np = nextPhase(meta, now, meta.phase === 'seek' && allCaught(s.players));
@@ -93,28 +95,27 @@ export class Referee {
     if (online.size < 2) return 'need-players';
     const order = s.meta.seekerOrder.filter((uid) => s.players[uid]);
     const round = s.meta.round + 1;
-    const seekerUid = pickSeeker(order, round, online);
+    const seekerUid = pickSeeker(order, s.meta.seekerUid, online);
     if (!seekerUid) return 'need-players';
-    const teams = assignTeams(order, seekerUid);
+    const teams = assignTeams(order, seekerUid, online);
     const states: Record<string, Partial<PlayerState>> = {};
     for (const [uid, team] of Object.entries(teams)) states[uid] = { team, caught: false, frozenUntil: 0, caughtAt: 0 };
     this.states(states);
-    this.meta({ round, seekerUid, seekerOrder: order, phase: 'prep', phaseEndsAt: this.now() + PREP_MS, paused: false, remainingMs: 0 });
+    this.meta({ round, seekerUid, seekerOrder: order, phase: 'prep', phaseEndsAt: this.now() + PREP_MS, paused: false, pausedAt: 0 });
     return 'ok';
   }
 
   pause(): void {
     const m = this.s?.meta;
     if (!m || m.paused || (m.phase !== 'prep' && m.phase !== 'seek')) return;
-    const remainingMs = Math.max(0, m.phaseEndsAt - this.now());
-    this.meta({ paused: true, remainingMs });
-    this.port.armHostDisconnect(remainingMs);
+    this.meta({ paused: true, pausedAt: this.now() });
   }
 
   resume(): void {
     const m = this.s?.meta;
     if (!m || !m.paused) return;
-    this.meta({ paused: false, phaseEndsAt: this.now() + m.remainingMs });
+    const now = this.now();
+    this.meta({ paused: false, phaseEndsAt: now + remainingMs(m, now) });
   }
 
   forceEnd(): void {

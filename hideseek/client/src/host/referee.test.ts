@@ -16,12 +16,12 @@ function harness(uids: string[], opts: { offline?: string[]; meta?: Partial<Meta
   });
   const db: RoomSnapshot = {
     meta: {
-      hostUid: 'host', phase: 'lobby', round: 0, phaseEndsAt: 0, paused: false, remainingMs: 0,
+      hostUid: 'host', phase: 'lobby', round: 0, phaseEndsAt: 0, paused: false, pausedAt: 0,
       seekerOrder: [...uids], seekerUid: null, ...opts.meta,
     },
     players, pos: {}, hostOnline: true,
   };
-  const calls = { deleted: [] as string[], armed: [] as (number | null)[], kicked: [] as string[] };
+  const calls = { deleted: [] as string[], armed: [] as boolean[], kicked: [] as string[] };
   const push = () => ref.onSnapshot(structuredClone(db));
   const port: RoomPort = {
     updateMeta: (p) => { db.meta = { ...db.meta, ...p }; queueMicrotask(push); },
@@ -30,7 +30,7 @@ function harness(uids: string[], opts: { offline?: string[]; meta?: Partial<Meta
       queueMicrotask(push);
     },
     deleteAction: (id) => calls.deleted.push(id),
-    armHostDisconnect: (ms) => calls.armed.push(ms),
+    armHostDisconnect: (on) => calls.armed.push(on),
     kick: (uid) => { calls.kicked.push(uid); delete db.players[uid]; queueMicrotask(push); },
   };
   const ref = new Referee(port, () => now);
@@ -41,6 +41,7 @@ function harness(uids: string[], opts: { offline?: string[]; meta?: Partial<Meta
     now: () => now,
     flush: () => new Promise<void>((r) => setTimeout(r, 0)),
     setPos: (uid: string, p: Partial<Pos>) => { db.pos[uid] = { x: 0, y: 0, moving: false, ...p }; ref.onSnapshot(structuredClone(db)); },
+    setOnline: (uid: string, online: boolean) => { db.players[uid].online = online; ref.onSnapshot(structuredClone(db)); },
     addPlayer: (uid: string) => {
       db.players[uid] = {
         profile: { name: uid, prop: null, joinedAt: 99, slot: '6' },
@@ -119,11 +120,14 @@ describe('tick', () => {
     h.advance(15_000); h.ref.tick(); await h.flush();
     expect(h.db.meta.phase).toBe('lobby');
   });
-  it('re-arms host-disconnect pause with the remaining time during a round', async () => {
+  it('arms the host-disconnect pause while a round runs and disarms it in the lobby', async () => {
     const h = harness(['a', 'b']);
     await toSeek(h);
-    h.advance(1_000); h.ref.tick();
-    expect(h.calls.armed.at(-1)).toBe(239_000);
+    expect(h.calls.armed.at(-1)).toBe(true);
+    h.ref.forceEnd(); await h.flush();
+    h.advance(15_000); h.ref.tick(); await h.flush();
+    h.ref.tick();
+    expect(h.calls.armed.at(-1)).toBe(false);
   });
 });
 
@@ -140,16 +144,20 @@ describe('actions', () => {
     expect(h.calls.deleted).toEqual(['x1']);
   });
   it('duplicate catch on the same target counts once', async () => {
-    const h = harness(['a', 'b', 'c']);
+    const h = harness(['a', 'b', 'c', 'd']);
     await toSeek(h);
-    h.setPos('a', { x: 0 }); h.setPos('c', { x: 10 }); h.setPos('b', { x: 50 });
+    // c는 먼저 잡혀서 술래 편이 된 상태로 만든다
+    h.setPos('a', { x: 0 }); h.setPos('c', { x: 10 }); h.setPos('b', { x: 50 }); h.setPos('d', { x: 900 });
+    h.ref.onAction('x0', { uid: 'a', targetType: 'player', targetId: 'c', at: h.now() });
+    await h.flush();
+    expect(h.db.players.c.state.team).toBe('seek');
     h.ref.onAction('x1', { uid: 'a', targetType: 'player', targetId: 'b', at: h.now() });
     h.ref.onAction('x2', { uid: 'c', targetType: 'player', targetId: 'b', at: h.now() });
     await h.flush();
-    expect(h.db.players.a.state.score).toBe(3);
+    expect(h.db.players.a.state.score).toBe(6);
     expect(h.db.players.c.state.score).toBe(0);
     expect(h.db.players.c.state.frozenUntil).toBe(0);
-    expect(h.calls.deleted).toEqual(['x1', 'x2']);
+    expect(h.calls.deleted).toEqual(['x0', 'x1', 'x2']);
   });
   it('decor click freezes the seeker for 2s and later clicks are ignored', async () => {
     const h = harness(['a', 'b']);
@@ -171,7 +179,7 @@ describe('pause / resume / forceEnd', () => {
     await toSeek(h);
     h.advance(60_000);
     h.ref.pause(); await h.flush();
-    expect(h.db.meta).toMatchObject({ paused: true, remainingMs: 180_000 });
+    expect(h.db.meta).toMatchObject({ paused: true, pausedAt: h.now() });
     h.advance(100_000);
     h.ref.tick(); await h.flush();
     expect(h.db.meta.phase).toBe('seek');
@@ -179,10 +187,18 @@ describe('pause / resume / forceEnd', () => {
     expect(h.db.meta).toMatchObject({ paused: false, phaseEndsAt: h.now() + 180_000 });
   });
   it('a room that was auto-paused by host disconnect stays paused until resume', async () => {
-    const h = harness(['a', 'b'], { meta: { phase: 'seek', round: 1, paused: true, remainingMs: 50_000, phaseEndsAt: 1 } });
+    const h = harness(['a', 'b'], { meta: { phase: 'seek', round: 1, paused: true, pausedAt: 900_000, phaseEndsAt: 950_000 } });
     h.advance(500_000);
     h.ref.tick(); await h.flush();
     expect(h.db.meta).toMatchObject({ phase: 'seek', paused: true });
+    h.ref.resume(); await h.flush();
+    expect(h.db.meta).toMatchObject({ paused: false, phaseEndsAt: h.now() + 50_000 });
+  });
+  it('stale pause from a flaky teacher connection never gives more than the phase length', async () => {
+    // 교사가 준비 3초 남기고 끊긴 사이 로컬에서 찾기 단계로 넘어간 기록이 뒤늦게 덮어쓴 경우
+    const h = harness(['a', 'b'], { meta: { phase: 'seek', round: 1, paused: true, pausedAt: 1_000_000 - 3_000, phaseEndsAt: 1_000_000 + 240_000 } });
+    h.ref.resume(); await h.flush();
+    expect(h.db.meta.phaseEndsAt).toBe(h.now() + 240_000);
   });
   it('forceEnd during seek settles survivors at the current elapsed time', async () => {
     const h = harness(['a', 'b']);
@@ -223,6 +239,23 @@ describe('players coming and going', () => {
       h.advance(15_000); h.ref.tick(); await h.flush();
     }
     expect(seekers).toEqual(['a', 'b', 'c']);
+  });
+  it('a student offline at round start sits the round out', async () => {
+    const h = harness(['a', 'b', 'c'], { offline: ['c'] });
+    h.ref.startRound(); await h.flush();
+    expect(teamOf(h)).toEqual({ a: 'seek', b: 'hide', c: 'wait' });
+  });
+  it('seeker after an offline skip continues from the last seeker, without repeats', async () => {
+    const h = harness(['a', 'b', 'c', 'd']);
+    const seekers: (string | null)[] = [];
+    for (let r = 0; r < 4; r++) {
+      h.setOnline('b', r !== 1);
+      h.ref.startRound(); await h.flush();
+      seekers.push(h.db.meta.seekerUid);
+      h.ref.forceEnd(); await h.flush();
+      h.advance(15_000); h.ref.tick(); await h.flush();
+    }
+    expect(seekers).toEqual(['a', 'c', 'd', 'a']);
   });
   it('showFinal only from the lobby', async () => {
     const h = harness(['a', 'b']);

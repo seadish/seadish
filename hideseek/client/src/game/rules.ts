@@ -1,6 +1,6 @@
 import type { Action, Meta, Phase, Player, Pos, Team } from './types';
 import {
-  FREEZE_MS, NAME_MAX, POINT_INTERVAL_MS, RESULT_MS, SEEK_MS, SURVIVE_BONUS, TAG_RANGE,
+  FREEZE_MS, NAME_MAX, POINT_INTERVAL_MS, PREP_MS, RESULT_MS, SEEK_MS, SURVIVE_BONUS, TAG_RANGE,
 } from './constants';
 
 export function validName(raw: string): string | null {
@@ -8,18 +8,21 @@ export function validName(raw: string): string | null {
   return name.length >= 1 && [...name].length <= NAME_MAX ? name : null;
 }
 
-export function pickSeeker(order: string[], round: number, online: Set<string>): string | null {
+/** 지난 술래 다음 순서의 접속 중인 학생. 지난 술래가 없거나 목록에 없으면 처음부터. */
+export function pickSeeker(order: string[], prevSeeker: string | null, online: Set<string>): string | null {
   const n = order.length;
+  const start = prevSeeker === null ? 0 : order.indexOf(prevSeeker) + 1; // 없으면 indexOf=-1 → 0
   for (let i = 0; i < n; i++) {
-    const uid = order[(round - 1 + i) % n];
+    const uid = order[(start + i) % n];
     if (online.has(uid)) return uid;
   }
   return null;
 }
 
-export function assignTeams(order: string[], seekerUid: string): Record<string, Team> {
+/** 술래는 seek, 접속 중인 나머지는 hide, 판 시작 때 접속이 끊긴 학생은 이번 판을 쉰다(wait). */
+export function assignTeams(order: string[], seekerUid: string, online: Set<string>): Record<string, Team> {
   const teams: Record<string, Team> = {};
-  for (const uid of order) teams[uid] = uid === seekerUid ? 'seek' : 'hide';
+  for (const uid of order) teams[uid] = uid === seekerUid ? 'seek' : online.has(uid) ? 'hide' : 'wait';
   return teams;
 }
 
@@ -61,9 +64,16 @@ export function resolveAction(a: Action, ctx: ActionContext): ActionResult {
     : { kind: 'catch', seekerUid: a.uid, targetUid: a.targetId };
 }
 
+const PHASE_MS: Partial<Record<Phase, number>> = { prep: PREP_MS, seek: SEEK_MS, result: RESULT_MS };
+
+/** 남은 시간. 멈춘 동안은 멈춘 순간 기준이고, 그 단계의 원래 길이를 넘지 않는다. */
+export function remainingMs(meta: Meta, now: number): number {
+  const ms = meta.paused ? meta.phaseEndsAt - meta.pausedAt : meta.phaseEndsAt - now;
+  return Math.min(PHASE_MS[meta.phase] ?? Infinity, Math.max(0, ms));
+}
+
 export function seekElapsed(meta: Meta, now: number): number {
-  const remaining = meta.paused ? meta.remainingMs : meta.phaseEndsAt - now;
-  return Math.min(SEEK_MS, Math.max(0, SEEK_MS - remaining));
+  return Math.min(SEEK_MS, Math.max(0, SEEK_MS - remainingMs({ ...meta, phase: 'seek' }, now)));
 }
 
 export function catchPoints(elapsedMs: number): number {

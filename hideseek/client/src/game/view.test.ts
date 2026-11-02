@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { canAct, seesWobble, isVisible, remainingSec } from './view';
+import { canAct, seesWobble, isVisible, remainingSec, hidesWorld } from './view';
 import type { Meta, Phase, PlayerState, Team } from './types';
 
 const NOW = 100_000;
 const meta = (phase: Phase, o: Partial<Meta> = {}): Meta => ({
-  hostUid: 'h', phase, round: 1, phaseEndsAt: NOW + 10_000, paused: false, remainingMs: 0, seekerOrder: [], seekerUid: null, ...o,
+  hostUid: 'h', phase, round: 1, phaseEndsAt: NOW + 10_000, paused: false, pausedAt: 0, seekerOrder: [], seekerUid: null, ...o,
 });
 const me = (team: Team, o: Partial<PlayerState> = {}): PlayerState => ({ team, caught: false, frozenUntil: 0, score: 0, caughtAt: 0, ...o });
 const none = { move: false, click: false };
@@ -39,6 +39,17 @@ describe('isVisible', () => {
 
 describe('remainingSec', () => {
   it('rounds up', () => expect(remainingSec(meta('seek', { phaseEndsAt: NOW + 1_500 }), NOW)).toBe(2));
-  it('uses remainingMs while paused', () => expect(remainingSec(meta('seek', { paused: true, remainingMs: 4_001 }), NOW)).toBe(5));
+  it('uses the pause moment while paused', () => expect(remainingSec(meta('seek', { paused: true, pausedAt: NOW - 60_000, phaseEndsAt: NOW - 60_000 + 4_001 }), NOW)).toBe(5));
   it('never negative', () => expect(remainingSec(meta('seek', { phaseEndsAt: NOW - 50 }), NOW)).toBe(0));
+});
+
+describe('hidesWorld', () => {
+  it('seeker sees nothing during prep, even while paused', () => {
+    expect(hidesWorld(meta('prep'), 'seek')).toBe(true);
+    expect(hidesWorld(meta('prep', { paused: true }), 'seek')).toBe(true);
+  });
+  it('hiders and the seek phase are not hidden', () => {
+    expect(hidesWorld(meta('prep'), 'hide')).toBe(false);
+    expect(hidesWorld(meta('seek'), 'seek')).toBe(false);
+  });
 });

@@ -7,7 +7,7 @@ export interface Meta {
   round: number;            // 0 = 아직 시작 안 함
   phaseEndsAt: number;      // 서버 시간 ms, lobby/final에서는 0
   paused: boolean;
-  remainingMs: number;      // paused일 때만 의미
+  pausedAt: number;         // 멈춘 순간의 서버 시각(paused일 때만 의미)
   seekerOrder: string[];    // 입장 순서 uid
   seekerUid: string | null; // 이번 판 첫 술래
 }

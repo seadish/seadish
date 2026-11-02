@@ -17,7 +17,7 @@ afterAll(() => env.cleanup());
 beforeEach(async () => {
   await env.clearDatabase();
   await env.withSecurityRulesDisabled(async (ctx) => {
-    await ctx.database().ref(`${R}/meta`).set({ hostUid: 'host', phase: 'lobby', round: 0, phaseEndsAt: 0, paused: false, remainingMs: 0 });
+    await ctx.database().ref(`${R}/meta`).set({ hostUid: 'host', phase: 'lobby', round: 0, phaseEndsAt: 0, paused: false, pausedAt: 0 });
   });
 });
 
@@ -36,9 +36,9 @@ describe('meta', () => {
   it('host can write meta', () => assertSucceeds(as('host').ref(`${R}/meta/phase`).set('prep')));
   it('student cannot write meta', () => assertFails(as('kid').ref(`${R}/meta/phase`).set('prep')));
   it('anyone signed in can create a new room as its host', () =>
-    assertSucceeds(as('t2').ref('rooms/5555/meta').set({ hostUid: 't2', phase: 'lobby', round: 0, phaseEndsAt: 0, paused: false, remainingMs: 0 })));
+    assertSucceeds(as('t2').ref('rooms/5555/meta').set({ hostUid: 't2', phase: 'lobby', round: 0, phaseEndsAt: 0, paused: false, pausedAt: 0 })));
   it('cannot take over an existing room', () =>
-    assertFails(as('t2').ref(`${R}/meta`).set({ hostUid: 't2', phase: 'lobby', round: 0, phaseEndsAt: 0, paused: false, remainingMs: 0 })));
+    assertFails(as('t2').ref(`${R}/meta`).set({ hostUid: 't2', phase: 'lobby', round: 0, phaseEndsAt: 0, paused: false, pausedAt: 0 })));
   it('signed-out user cannot read', () => assertFails(env.unauthenticatedContext().database().ref(R).get()));
 });
 

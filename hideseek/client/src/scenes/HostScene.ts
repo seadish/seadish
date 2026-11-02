@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
-import { hostPresence, onActions, subscribeRoom } from '../net/room';
+import { hostPresence, leaveToEntry, onActions, subscribeRoom } from '../net/room';
 import type { RoomSnapshot } from '../game/types';
 import { MAP_H, MAP_W } from '../game/map';
 import { remainingSec, seesWobble } from '../game/view';
 import { Referee, roomPort } from '../host/referee';
+import { startTicker } from '../host/ticker';
 import { drawDecor, drawFloor } from './drawMap';
 import { PlayerSprite } from './playerSprites';
 import type { GameData } from './StudentScene';
@@ -43,9 +44,9 @@ export class HostScene extends Phaser.Scene {
     });
     const offActions = onActions(db, data.code, (id, a) => this.referee.onAction(id, a));
     const offPresence = hostPresence(db, data.code);
-    // 탭이 뒤에 있어도 돌아가도록 Phaser 루프가 아니라 setInterval로 심판을 돌린다.
-    const timer = window.setInterval(() => this.referee.tick(), TICK_MS);
-    this.events.once('shutdown', () => { offRoom(); offActions(); offPresence(); clearInterval(timer); });
+    // 탭이 뒤에 있어도 돌아가도록 Phaser 루프가 아니라 별도 타이머로 심판을 돌린다.
+    const stopTicker = startTicker(() => this.referee.tick(), TICK_MS);
+    this.events.once('shutdown', () => { offRoom(); offActions(); offPresence(); stopTicker(); });
 
     if (import.meta.env.VITE_USE_EMULATOR === '1') {
       (window as any).__hs = { uid: data.uid, code: data.code, snapshot: () => this.s };
@@ -107,6 +108,10 @@ export class HostScene extends Phaser.Scene {
         meta.paused ? '▶ 재개' : '⏸ 일시정지'),
       playing && h('button', { testid: 'end-btn', class: 'danger', onclick: () => this.run(() => ref.forceEnd()) }, '⏹ 판 끝내기'),
       meta.phase === 'lobby' && meta.round >= 1 && h('button', { testid: 'final-btn', class: 'ghost', onclick: () => this.run(() => ref.showFinal()) }, '🏆 최종 순위'),
+      (meta.phase === 'lobby' || meta.phase === 'final') && h('button', {
+        testid: 'new-room-btn', class: 'ghost',
+        onclick: () => { if (window.confirm('이 방을 닫고 새 방을 만들까요? 점수는 처음부터 시작해요.')) leaveToEntry(); },
+      }, '새 방 만들기'),
     );
 
     this.panel.replaceChildren(h('div', { class: 'side panel', testid: 'host-panel' },

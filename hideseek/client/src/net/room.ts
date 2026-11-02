@@ -5,8 +5,10 @@ import {
 import type { Action, Meta, Player, PlayerState, Pos, RoomSnapshot } from '../game/types';
 import { MAX_STUDENTS } from '../game/constants';
 import { validName } from '../game/rules';
+import { decodeRoom, encodeRoom } from './remember';
 
-const HOST_ROOM_KEY = 'hideseek.hostRoom';
+export const HOST_ROOM_KEY = 'hideseek.hostRoom';
+export const STUDENT_ROOM_KEY = 'hideseek.studentRoom';
 const path = (code: string, sub = '') => `rooms/${code}${sub ? '/' + sub : ''}`;
 
 function storage(): Storage | null {
@@ -15,7 +17,7 @@ function storage(): Storage | null {
 
 export async function createRoom(db: Database, hostUid: string): Promise<string> {
   const meta: Meta = {
-    hostUid, phase: 'lobby', round: 0, phaseEndsAt: 0, paused: false, remainingMs: 0, seekerOrder: [], seekerUid: null,
+    hostUid, phase: 'lobby', round: 0, phaseEndsAt: 0, paused: false, pausedAt: 0, seekerOrder: [], seekerUid: null,
   };
   for (let i = 0; i < 20; i++) {
     const code = String(1000 + Math.floor(Math.random() * 9000));
@@ -25,15 +27,30 @@ export async function createRoom(db: Database, hostUid: string): Promise<string>
     } catch {
       continue; // 같은 순간 다른 교사가 같은 코드를 만든 경우
     }
-    try { storage()?.setItem(HOST_ROOM_KEY, code); } catch { /* 저장 실패해도 진행 */ }
+    rememberRoom(HOST_ROOM_KEY, code);
     return code;
   }
   throw new Error('방 코드를 만들지 못했어요');
 }
 
+/** 이 브라우저가 들어갔던 방을 기억한다(2시간). code가 null이면 잊는다. */
+export function rememberRoom(key: string, code: string | null): void {
+  try { code ? storage()?.setItem(key, encodeRoom(code, Date.now())) : storage()?.removeItem(key); } catch { /* 무시 */ }
+}
+
+export function recallRoom(key: string): string | null {
+  try { return decodeRoom(storage()?.getItem(key) ?? null, Date.now()); } catch { return null; }
+}
+
+/** 기억한 방을 모두 잊고 첫 화면으로 */
+export function leaveToEntry(): void {
+  rememberRoom(HOST_ROOM_KEY, null);
+  rememberRoom(STUDENT_ROOM_KEY, null);
+  location.reload();
+}
+
 export async function findHostRoom(db: Database, hostUid: string): Promise<string | null> {
-  let code: string | null = null;
-  try { code = storage()?.getItem(HOST_ROOM_KEY) ?? null; } catch { /* 없음 */ }
+  const code = recallRoom(HOST_ROOM_KEY);
   if (!code) return null;
   const meta = (await get(ref(db, path(code, 'meta')))).val();
   // 최종 순위까지 끝난 방은 다시 열지 않고 새 방을 만든다.
@@ -93,7 +110,7 @@ export function toSnapshot(raw: any): RoomSnapshot | null {
   const m = raw.meta;
   const meta: Meta = {
     hostUid: m.hostUid, phase: m.phase ?? 'lobby', round: m.round ?? 0, phaseEndsAt: m.phaseEndsAt ?? 0,
-    paused: !!m.paused, remainingMs: m.remainingMs ?? 0, seekerOrder: list(m.seekerOrder), seekerUid: m.seekerUid ?? null,
+    paused: !!m.paused, pausedAt: m.pausedAt ?? 0, seekerOrder: list(m.seekerOrder), seekerUid: m.seekerUid ?? null,
   };
   const players: Record<string, Player> = {};
   for (const [uid, p] of Object.entries<any>(raw.players ?? {})) {
@@ -156,9 +173,9 @@ export async function kick(db: Database, code: string, uid: string): Promise<voi
   await update(ref(db, path(code)), changes);
 }
 
-/** 교사 탭이 끊기면 서버가 일시정지시키도록 예약한다. null이면 예약 해제(대기실 등). */
-export async function armHostDisconnect(db: Database, code: string, remainingMs: number | null): Promise<void> {
+/** 교사 탭이 끊기면 서버가 그 순간의 서버 시각으로 일시정지시키도록 예약한다. false면 예약 해제. */
+export async function armHostDisconnect(db: Database, code: string, on: boolean): Promise<void> {
   const od = onDisconnect(ref(db, path(code, 'meta')));
   await od.cancel();
-  if (remainingMs !== null) await od.update({ paused: true, remainingMs });
+  if (on) await od.update({ paused: true, pausedAt: serverTimestamp() });
 }
