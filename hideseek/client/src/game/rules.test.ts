@@ -7,7 +7,7 @@ import type { Meta, Player, Pos, Team, Action } from './types';
 
 function mkPlayer(team: Team, opts: Partial<Player['state']> = {}, online = true): Player {
   return {
-    profile: { name: 'x', prop: 'desk', joinedAt: 0 },
+    profile: { name: 'x', prop: 'desk', joinedAt: 0, slot: '0' },
     state: { team, caught: false, frozenUntil: 0, score: 0, caughtAt: 0, ...opts },
     online,
   };

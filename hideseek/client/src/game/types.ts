@@ -11,7 +11,7 @@ export interface Meta {
   seekerOrder: string[];    // 입장 순서 uid
   seekerUid: string | null; // 이번 판 첫 술래
 }
-export interface Profile { name: string; prop: string | null; joinedAt: number; }
+export interface Profile { name: string; prop: string | null; joinedAt: number; slot: string; }
 export interface PlayerState { team: Team; caught: boolean; frozenUntil: number; score: number; caughtAt: number; }
 export interface Pos { x: number; y: number; moving: boolean; }
 export interface Action { uid: string; targetType: 'decor' | 'player'; targetId: string; at: number; }
