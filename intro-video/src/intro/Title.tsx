@@ -20,7 +20,7 @@ const Letter: React.FC<{ char: string; index: number }> = ({ char, index }) => {
     config: { damping: 9, stiffness: 140, mass: 0.8 },
   });
 
-  // A gentle wave runs through the letters while the fish passes by (2.6s–4.2s).
+  // A gentle wave runs through the letters while the orca passes by (2.6s–4.2s).
   const wobbleStrength = interpolate(
     frame,
     [1.6 * fps, 2 * fps, 3 * fps, 3.4 * fps],
